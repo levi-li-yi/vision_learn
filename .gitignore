@@ -1,0 +1,9 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# 虚拟环境（体积大且可由 requirements.txt 重建）
+.venv/
+
+# pytest 缓存
+.pytest_cache/

@@ -13,7 +13,8 @@ eval 里的连通域统计，底层全是这几个操作。
        float32 小数（单精度）；float64 小数（双精度，linspace 的默认）
      参数旋钮共四大类：类型(dtype=) / 形状(元组) / 方向(axis=) / 范围(两个数)。
 
-完整 API 手册（每个方法的全部参数+可运行例子）见同目录 NUMPY_API_REFERENCE.md。
+注释里每个 API 都带"例: 入参 -> 出参"，全部可在交互环境亲手验证
+（.venv/Scripts/python.exe）。完整参数手册见同目录 NUMPY_API_REFERENCE.md。
 
 运行方式：
     python -m stage0.numpy_basics
@@ -31,23 +32,28 @@ def make_gradient_image(height: int, width: int) -> np.ndarray:
 
     NumPy 第一课——向量化：全程无 for 循环，三行造一张图。
     """
-    # np.linspace(起点, 终点, num=个数, dtype=类型)
-    #   从起点到终点"均匀撒 num 个点"，两头都包含：linspace(0,255,8)
-    #   -> [0, 36.4, 72.9, ..., 255]。num= 关键字传"撒几个"（不传默认 50！）；
+    # np.linspace(起点, 终点, num=个数, dtype=类型)：从起点到终点均匀撒 num 个点，
+    # 两头都包含；num= 不传默认 50 个。
+    #   例: np.linspace(0, 10, num=3)              -> array([ 0.,  5., 10.])
+    #   本行(width=8): np.linspace(0, 255, num=8)  -> [0., 36.4, 72.9, ..., 255.] shape (8,)
     #   dtype=float32 造小数表（均匀点大多是 36.4 这种小数，且下一步要参与运算）。
     #   对比记忆：arange 管"步长"，linspace 管"个数"。
     row = np.linspace(0, 255, num=width, dtype=np.float32)   # (W,) 一条一维横线
 
-    # np.tile(表格, (行份数, 列份数))
-    #   把 row 当印章复印：行方向印 height 份、列方向 1 份——一条线 (W,)
-    #   摞成一张表 (H, W)。"形状/布局类参数一律用元组装"是 np 的统一风格。
+    # np.tile(表格, (行份数, 列份数))：把表格当印章复印铺贴。
+    #   例: np.tile([1, 2, 3], (2, 1))  -> [[1,2,3], [1,2,3]]  shape (2,3)
+    #   本行: row(8,) x (4,1)           -> 同一条线摞 4 行     shape (4,8)
+    #   "形状/布局类参数一律用元组装"是 np 的统一风格。
     img = np.tile(row, (height, 1))                          # (H, W)
 
-    # 安全三连（顺序固定，详细机理见 safe_brightness）：
-    #   np.round(表)          四舍五入，36.4 -> 36.
-    #   np.clip(表, 0, 255)   超界拉回：>255 改 255、<0 改 0
-    #   .astype(np.uint8)     转图像标准类型。注意：astype 是"砍小数"不是
-    #                         四舍五入（1.7 -> 1），所以必须排在 round 之后
+    # 安全三连（顺序固定，机理见 safe_brightness）：
+    #   np.round(表) 四舍五入
+    #     例: np.round([36.4, 72.9]) -> array([36., 73.])
+    #   np.clip(表, 下限, 上限) 超界拉回
+    #     例: np.clip([250, 287.5, -3], 0, 255) -> array([250., 255., 0.])
+    #   .astype(类型) 换类型。注意：astype 是"砍小数"不是四舍五入，必须排 round 后
+    #     例: np.array([1.7, 2.2]).astype(np.uint8) -> array([1, 2])（1.7 砍成 1！）
+    #         np.array([250, 300, -5], dtype=np.uint8) -> [250, 44, 251]（绕圈）
     return np.clip(np.round(img), 0, 255).astype(np.uint8)
 
 
@@ -56,20 +62,25 @@ def make_checkerboard(size: int, cell: int = 16) -> np.ndarray:
 
     规则：格子坐标 (行号+列号) 为偶数则白、奇数则黑。
     """
-    # np.arange(个数)：造 0,1,2,... 连续整数（arange(64) -> [0..63]）。
-    # // 整除（7//2=3，只要商）：坐标除以格宽 -> "属于第几格"，
-    # 得到 [0]*16+[1]*16+[2]*16+[3]*16 这种归格编号。
+    # np.arange(个数)：造 0,1,2,... 连续整数。
+    #   例: np.arange(5) -> array([0, 1, 2, 3, 4])
+    # // 整除（7//2=3，只要商）：坐标除以格宽 -> "属于第几格"。
+    #   例(size=64,cell=16): np.arange(64)//16
+    #     -> [0,0,...,0, 1,1,...,1, 2,..., 3,...]（每 16 个一组）shape (64,)
     cell_index = np.arange(size) // cell
 
-    # [:, None] / [None, :]：切片写法"插一根长 1 的新轴"，把 (64,) 摆竖成
-    #   (64,1)、摆横成 (1,64)——专给广播摆姿势。
-    # 竖 (64,1) + 横 (1,64)：广播自动撑成 (64,64) 的"行列加法表"，
-    #   位置 (i,j) 上 = 行格号[i] + 列格号[j]。
-    # % 取余（7%2=1）：和为偶数 -> 0、奇数 -> 1，黑白判据就出来了。
+    # [:, None] / [None, :]：切片写法"插一根长 1 的新轴"（专给广播摆姿势）。
+    #   例: np.arange(4)           -> [0,1,2,3]            shape (4,)
+    #       np.arange(4)[:, None]  -> [[0],[1],[2],[3]]    shape (4,1) 摆竖
+    # 竖(64,1) + 横(1,64)：广播自动撑成 (64,64) 的"行列加法表"。% 取余（7%2=1）。
+    #   迷你例: 竖[[1],[2]] + 横[[10,20]]   -> [[11,21],[12,22]]   shape (2,2)
+    #           竖[[1],[2]] + 横[[10,20]] % 2 -> [[1,1],[0,0]]    （奇偶判据）
     parity = (cell_index[:, None] + cell_index[None, :]) % 2  # (S,S) 的 0/1 表
 
-    # np.where(对错表, 填A, 填B)：对(True)的位置填 255、错(False)的位置填 0
-    #   ——"逐格 if-else 一次做完"。常与比较运算连招：先比较得对/错表、再上色。
+    # np.where(对错表, 填A, 填B)：对(True)的位置填 A、错(False)的位置填 B——
+    # "逐格 if-else 一次做完"。
+    #   例: np.where([True, False, True], 255, 0) -> array([255,   0, 255])
+    #   本行: 偶数格 -> 255（白），奇数格 -> 0（黑）
     return np.where(parity == 0, 255, 0).astype(np.uint8)
 
 
@@ -85,10 +96,17 @@ def crop_patch(image: np.ndarray, x0: int, y0: int, patch_size: int) -> np.ndarr
       - 逗号前管"行(y/高)"、逗号后管"列(x/宽)"——注意与参数 (x0, y0) 顺序相反；
       - 冒号单独出现 = 全要；冒号两边可写算式（y0 : y0+size = 从 y0 起要 size 个）。
     """
-    # .ndim：表格自带的"维数"标签（属性，不加括号）。2 = 灰度图表、3 = 彩色图
-    # ——入口安检：3 维的彩色图不许冒充 2 维灰度图（错误越早暴露越好定位）。
+    # .ndim：表格自带的"维数"标签（属性，不加括号）——入口安检。
+    #   例: np.zeros((2, 3)).ndim   -> 2   （灰度图表）
+    #       np.zeros((2, 3, 3)).ndim -> 3  （彩色图，不许冒充 2 维灰度图）
     if image.ndim != 2:
         raise ValueError("本函数只处理二维灰度图")
+    # 切片示例:
+    #   a = [[10, 20, 30],
+    #        [40, 50, 60]]
+    #   a[0:2, 1:3] -> [[20, 30],   # 第 0~1 行、第 1~2 列
+    #                   [50, 60]]
+    #   本行: image[1:4, 4:7]（y0=1,x0=4,size=3 时）-> 3x3 小块
     return image[y0: y0 + patch_size, x0: x0 + patch_size]
 
 
@@ -99,11 +117,15 @@ def crop_patch(image: np.ndarray, x0: int, y0: int, patch_size: int) -> np.ndarr
 def channel_means(rgb: np.ndarray) -> np.ndarray:
     """按通道求均值：R/G/B 各自的平均亮度。
 
-    .mean(axis=方向)：求平均。口诀：**axis 写谁，谁就消失**——
-    (H,W,3) 写 axis=(0,1) 即压掉"高和宽"两根方向，只剩 (3,)。
-    axis 可为单个数字或元组；不传则全部压成一个数。
-    （sum/max/min 同理，同一家族。）属性同理三件套：shape 多大、
-    ndim 几维、dtype 装什么——都是"铭牌"，不加括号。
+    .mean(axis=方向)：求平均。口诀：**axis 写谁，谁就消失**；axis 可为数字或
+    元组；不传则全部压成一个数。（sum/max/min 同理，同一家族。）
+    #   例: m = [[10, 20],
+    #            [30, 40]]
+    #       m.mean(axis=0) -> array([20., 30.])   # 压掉"行"-> 每列一个平均
+    #       m.mean(axis=1) -> array([15., 35.])   # 压掉"列"-> 每行一个平均
+    #       m.mean()      -> 25.0                 # 不传 -> 全压成一个数
+    #   本行: (2,2,3).mean(axis=(0,1)) -> array([10., 20., 30.])  # R/G/B 平均
+    # 属性三件套同理（都不加括号）：shape 多大、ndim 几维、dtype 装什么。
     """
     return rgb.mean(axis=(0, 1))
 
@@ -117,12 +139,15 @@ def normalize(image: np.ndarray, mean, std) -> np.ndarray:
       3. - mean               广播：(H,W,3) 减 (3,)，NumPy 自动把 (3,) 对齐到
                               最后一维——R 减 R 的均值、G 减 G 的、B 减 B 的；
       4. / std                同理，除以各通道的波动范围。
-    广播 = 免费的隐形复制 + 逐元素运算：形状不同的两表相运算，短的自动
-    "沿缺的方向复制撑开"再逐格算，不用写循环。
+    广播 = 免费的隐形复制 + 逐元素运算：
+      例: (2,2,3) 全是 10/20/30 的图，mean=[10,10,10]
+          图 - mean -> 全 0 的 (2,2,3)   # (3,) 自动摊到每一行每一列
     mean/std 的数值是 ImageNet 百万张图统计出来的"世界平均"。
     """
-    # np.asarray(数据, dtype=类型)：把列表转成表格。参数与 np.array 相同，
-    # 唯一区别：传进来的已是表格时不复制（能省则省版，省内存）。
+    # np.asarray(数据, dtype=类型)：把列表转表格。与 np.array 参数相同，唯一区别：
+    # 传进来的已是表格时不复制（能省则省版）。
+    #   例: np.asarray([0.485, 0.456, 0.406], dtype=np.float32)
+    #     -> array([0.485, 0.456, 0.406], dtype=float32)   shape (3,)
     mean = np.asarray(mean, dtype=np.float32)
     std = np.asarray(std, dtype=np.float32)
     return (image.astype(np.float32) / 255.0 - mean) / std
@@ -139,10 +164,12 @@ def safe_brightness(image: np.ndarray, factor: float) -> np.ndarray:
     250 * 1.15 = 287.5；uint8 只有 8 位、最大装 255，装不下就"绕圈"：
     287 - 256 = 31——本想调亮，250 反而变成 31 的深灰色（溢出回绕）。
     """
-    # 先升小数再乘：uint8 直接乘小数，结果类型和溢出都不可控
+    # 先升小数再乘（uint8 直接乘小数，结果类型和溢出都不可控）：
+    #   例: np.array([250], np.uint8).astype(np.float32) * 1.15 -> array([287.5])
     scaled = image.astype(np.float32) * factor
-    # 安全三连：round 四舍五入 -> clip 夹 0~255（287.5 饱和到 255，不绕圈）
-    # -> astype 转回图像标准类型。主工程所有亮度扰动/贴纸亮度都是这套写法。
+    # 安全三连的完整数值链（以 250 x 1.15 为例）：
+    #   287.5 --round--> 288. --clip(0,255)--> 255. --astype--> 255（正确饱和）
+    #   对比错误写法: 287.5 --astype(uint8)--> 31（绕圈，287-256）
     return np.clip(np.round(scaled), 0, 255).astype(np.uint8)
 
 
@@ -156,14 +183,22 @@ def demo_view_vs_copy():
     工程意义：Cut-Paste 改贴纸/背景时，若拿切片当草稿随便改，会污染
     原始训练数据——想隔离必须显式 .copy()。
     """
-    # np.arange(12) 造 0..11；.reshape(3,4) 数字不变、换个摆法（总数必须相等）
+    # np.arange(12) 造 0..11；.reshape(行,列) 数字不变换摆法（总数必须相等）。
+    #   例: np.arange(12).reshape(3, 4)
+    #     -> [[ 0,  1,  2,  3],
+    #         [ 4,  5,  6,  7],
+    #         [ 8,  9, 10, 11]]
     a = np.arange(12).reshape(3, 4)
     view = a[0:2, :]            # 切片 = 视图：与 a 共享同一批数（另一扇窗）
     copy = a[0:2, :].copy()     # .copy() = 复印件：独立内存，从此各过各的
 
     a[0, 0] = 999               # 从 a 这扇窗进去改数
-    assert view[0, 0] == 999, "视图应看到修改"    # 同一间房，看得到
-    assert copy[0, 0] == 0, "拷贝不应看到修改"     # 早搬走了，不受影响
+    # 之后的现场证据：
+    #   a     -> [[999, 1, 2, 3], ...]
+    #   view[0,0] -> 999（同一间房，看得到）
+    #   copy[0,0] -> 0  （早搬走了，不受影响）
+    assert view[0, 0] == 999, "视图应看到修改"
+    assert copy[0, 0] == 0, "拷贝不应看到修改"
     return a
 
 
@@ -177,11 +212,14 @@ if __name__ == "__main__":
     print("-" * 60)
     grad = make_gradient_image(4, 8)
     # .shape/.dtype：铭牌属性——多大盘子 / 装什么类型
+    #   例: grad.shape -> (4, 8)；grad.dtype -> dtype('uint8')
     print(f"渐变图 shape={grad.shape} dtype={grad.dtype}")
     print(grad)
     board = make_checkerboard(64)
-    # np.unique(表)：表里有哪几种不同的值（验证棋盘格只有黑白 0 和 255）。
-    # (board == 255)：逐格比较得对/错表；对/错表 .mean() = True 占比 = 白块占比
+    # np.unique(表)：表里有哪几种不同的值。
+    #   例: np.unique([0, 255, 0, 255]) -> array([  0, 255])
+    # (board == 255)：逐格比较得对/错表；对/错表 .mean() = True 占比 = 白块占比。
+    #   例: np.array([True, False, True]).mean() -> 0.667
     print(f"棋盘格 shape={board.shape} 唯一值={np.unique(board)} "
           f"亮块占比={(board == 255).mean():.2f}")
 
@@ -194,9 +232,16 @@ if __name__ == "__main__":
     print("=" * 60)
     print("3) 归约 + 广播：通道均值与 ImageNet 归一化")
     print("-" * 60)
-    # np.stack([表A,表B,表C], axis=-1)：三张 (2,2) 纯色片沿"最后一根方向"摞成
-    # (2,2,3)——"三张透明胶片叠成彩色图"的动作本身。axis=0 则摞在最前(3,H,W)。
     # np.full(形状, 值, 类型)：造全填同一个数的表；第 3 个位置参数恰好是 dtype。
+    #   例: np.full((2, 2), 10, np.uint8)
+    #     -> [[10, 10],
+    #         [10, 10]]   dtype=uint8
+    # np.stack([表A,表B,表C], axis=-1)：沿"最后一根方向"摞，新增最后一维——
+    # "三张透明胶片叠成彩色图"的动作本身。
+    #   例: np.stack([全10的(2,2), 全20的(2,2), 全30的(2,2)], axis=-1)
+    #     -> [[[10,20,30],[10,20,30]],
+    #         [[10,20,30],[10,20,30]]]   shape (2,2,3)
+    #   （若 axis=0 则摞在最前变 (3,2,2)，通道就不在最后了）
     rgb = np.stack([np.full((2, 2), 10, np.uint8),
                     np.full((2, 2), 20, np.uint8),
                     np.full((2, 2), 30, np.uint8)], axis=-1)   # (2,2,3)
@@ -207,7 +252,9 @@ if __name__ == "__main__":
     print("=" * 60)
     print("4) dtype 陷阱：uint8 溢出")
     print("-" * 60)
-    # np.array(数据, dtype=类型)：不传 dtype 则 np 猜（这里明确用图像标准 uint8）
+    # np.array(数据, dtype=类型)：不传 dtype 则 np 猜（整数猜 int32）。
+    #   例: np.array([250, 100, 0], dtype=np.uint8)
+    #     -> array([250, 100, 0], dtype=uint8)
     patch = np.array([250, 100, 0], dtype=np.uint8)
     wrong = (patch * 1.15).astype(np.uint8)          # 错误示范：287.5 绕圈变 31
     right = safe_brightness(patch, 1.15)

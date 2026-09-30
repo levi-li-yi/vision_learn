@@ -147,27 +147,36 @@ def mean_std_by_sum_sq(x: np.ndarray):
 
 
 def kth_smallest(x: np.ndarray, q: float) -> float:
-    """按分位比例取"第 k 小"——torch.kthvalue 的手写版（仓库口径）。
+    """按分位比例取"第 k 小"——torch.kthvalue 手写版，无监督线的命脉。
 
-    比喻：n 个数从小到大排队，第 k 个出列。
-    换算：k = int(n * q)，钳位到 [1, n]（k=1 是最小值，k=n 是最大值）。
-    例: x = [0..9] 共 10 个
-      kth_smallest(x, 0.9)  k = int(10*0.9) = 9  -> 第 9 小 = 8.0
-      kth_smallest(x, 0.5)  k = 5                -> 第 5 小 = 4.0
-    仓库两处命脉：训练损失取前 0.1% 最难像素（k=int(n*0.999)）；
-    异常图 90%/99.5% 分位标定（_map_quantiles: min(max(int(n*0.9),1),n)）。
+    比喻：n 个人按个子从矮到高排成一队，喊"第 k 个出列"。
+    分位比例换名次：k = int(n * q)（直接砍小数，与仓库一致，非四舍五入），
+    再钳位到 [1, n]——k=1 是最矮、k=n 是最高。
+
+    小学算术（x = [0..9] 共 10 个，已排队 0,1,2,...,9）：
+      kth_smallest(x, 0.9) : k = int(10*0.9) = 9 -> 第 9 小 = 8.0
+      kth_smallest(x, 0.5) : k = 5               -> 第 5 小 = 4.0
+      kth_smallest(x, 0.0) : k=0 被钳到 1        -> 最小值 0.0
+    业务含义：q=0.9 的结果 = "90% 的数都不超过它"（90 分位线）。
+
+    为什么不用 np.quantile：库版默认在两数之间"插值"（第 9.5 名取第 9、10
+    名的中间值），返回一个可能不存在的数；仓库要"实实在在排在那的第 k 名"
+    （kthvalue 语义）——标定阈值必须是真实出现过的差距值。
+
+    仓库两处命脉：
+      训练损失取前 0.1% 最难像素（trainer.py, k = int(numel*0.999)）；
+      异常图 90%/99.5% 分位标定（_map_quantiles 同款钳位）。
     """
-    # int(n * q)：分位比例换算成名次（直接砍小数，与仓库一致——不是四舍五入）
+    # x.size：元素总个数（属性）
     n = x.size
+    # int(n * q)：分位比例 -> 名次（砍小数）
     k = int(n * q)
-    # min/max 双向钳位：q=0 时 k=0 -> 提到 1；q 过大乘出界 -> 压到 n
+    # min/max 双向钳位：k=0 -> 提到 1；乘出界 -> 压回 n
     k = min(max(k, 1), n)
-    # np.sort(表)：升序排序（原表不动，返回新排队结果）。
-    #   例: np.sort([3, 1, 2]) -> array([1, 2, 3])
-    # .ravel()：拉平成一维（几维的表都铺成一条队）。
-    #   例: np.array([[1,2],[3,4]]).ravel() -> array([1, 2, 3, 4])
+    # np.sort(表)：升序排队（原表不动，返回新队）。例: np.sort([3,1,2]) -> [1,2,3]
+    # .ravel()：拉平成一维（几维的表都铺成一条队）。例: [[1,2],[3,4]] -> [1,2,3,4]
     sorted_asc = np.sort(np.asarray(x, dtype=np.float64).ravel())
-    # 排队后取"第 k 个"：下标从 0 数，第 k 个 = 下标 k-1
+    # 排队后取"第 k 个"：下标从 0 数，第 k 个 = 下标 k-1（第 5 个下标是 4）
     return float(sorted_asc[k - 1])
 
 
@@ -192,42 +201,58 @@ def hard_mining_quantile(distance_map: np.ndarray, q: float = 0.999) -> float:
 
 
 def simulate_anomaly_scores(n_ok: int = 1000, n_ng: int = 200, seed: int = 42):
-    """模拟无监督线的"考试"场景：OK 图分数低而集中、NG 图分数高而分散。"""
-    # np.random.default_rng(种子)：造一台"随机器"。同一种子 -> 同一批随机数
-    #   （可复现；本工程所有测试的确定性全靠固定种子）。
+    """模拟无监督线的"考试"：好品分数低而挤、坏品分数高而散——造两座钟。
+
+    为什么造模拟数据：真实 NG 样本稀缺正是无监督线上线的原因——考试没
+    有真卷子，就按"好品/坏品的分数长什么样"各造一批：
+      好品带: 均值 0.2 标准差 0.05 -> 大多挤在 0.1~0.3（正常图差距小而齐）
+      坏品带: 均值 0.7 标准差 0.12 -> 大多散在 0.46~0.94（异常图差距大而乱）
+    两带基本不重叠 -> 直方图上两座"钟"分开站 -> AUC 接近 1。
+    """
+    # np.random.default_rng(种子)：造一台"随机器"。同一种子 -> 永远同一批
+    # 随机数（可复现：本工程全部测试的确定性都靠固定种子）。
+    #   例: default_rng(42).normal(0, 1, 2) 每次运行结果一模一样
     rng = np.random.default_rng(seed)
-    # rng.normal(均值, 标准差, size=个数)：从正态分布（钟形曲线）撒数。
-    #   例: rng.normal(0.2, 0.05, size=3) -> 约 [0.19, 0.24, 0.15] 一带的小数
-    # .clip(0, None)：夹紧，下限 0、上限不限（None = 该侧不设限）——分数非负。
+    # rng.normal(均值, 标准差, size=个数)：从正态分布撒数——钟形曲线，
+    # 中间多两头少，约 95% 落在 均值±2 倍标准差 内。
+    #   例: rng.normal(0.2, 0.05, 3) -> 约 [0.19, 0.24, 0.15] 一带
+    # .clip(0, None)：单侧夹紧（下限 0、上限 None = 不限）——差距分不能为负。
     ok_scores = rng.normal(0.2, 0.05, size=n_ok).clip(0, None)   # 好品：低分带
     ng_scores = rng.normal(0.7, 0.12, size=n_ng).clip(0, None)   # 坏品：高分带
     return ok_scores, ng_scores
 
 
 def auc_by_hand(labels: np.ndarray, scores: np.ndarray) -> float:
-    """手写 AUC：随机抽一好一坏，坏品分数更高的概率。
+    """手写 AUC：随机抽一坏一好比分数，坏品更高的概率——打擂台版。
 
-    0.5 = 瞎猜水平（两带完全重叠）；1.0 = 完美分离。
-    例: 好品分数 [0.1, 0.3]、坏品 [0.8] -> 2 场全赢 -> AUC = 1.0
-    仓库用 sklearn.roc_auc_score（同义）；此处用定义式两两比较作教学版。
+    玩法：坏品与好品两两配对打擂（x 个坏 x y 个好 = x*y 场），坏品分数
+    更高算模型"答对"这场；赢记 1 分、平局 0.5 分、输 0 分，
+    总分 / 场数 = 答对概率，就是 AUC。
+
+    小学算术：
+      好 [0.1, 0.3]  坏 [0.8]        : 2 场全赢 -> (2+0)/2 = 1.0  完美分离
+      好 [0.2, 0.8]  坏 [0.5]        : 一输一赢 -> 1/2     = 0.5  瞎猜水平
+    三个锚点：1.0 = 完美排序 / 0.5 = 瞎猜（两带重叠）/ 0.0 = 全反着判。
+    仓库用途：AUC 门控保存——新模型赢过历史最佳才准部署；
+    sklearn.roc_auc_score 与本定义等价（仓库线上用它）。
     """
-    # 布尔索引（掩码）——新姿势：比较运算先得一张对/错表，方括号拿它"挑行"。
-    #   例: scores = [0.1, 0.8, 0.3], labels = [0, 1, 0]
-    #       labels == 1          -> [False, True, False]（对/错表）
-    #       scores[labels == 1]  -> array([0.8])（只挑坏品那行）
-    #       scores[labels == 0]  -> array([0.1, 0.3])
+    # 布尔索引（掩码）：比较运算先得一张对/错表，方括号拿它"挑行"。
+    #   例: labels = [0, 1, 0], scores = [0.1, 0.8, 0.3]
+    #       labels == 1         -> [False, True, False]
+    #       scores[labels == 1] -> [0.8]（坏品分数，label 1 = NG）
+    #       scores[labels == 0] -> [0.1, 0.3]（好品分数）
     labels = np.asarray(labels)
     scores = np.asarray(scores, dtype=np.float64)
     pos, neg = scores[labels == 1], scores[labels == 0]
 
-    # 每个好品与整批坏品打擂台（向量化计数，不写内层循环）：
-    #   (p > neg)：一个好品对全部坏品的对/错表
-    #   .sum()：True 记 1 求和 = 赢的场数（例: 0.8 > [0.1,0.3] -> [T,T] -> 2）
+    # 每个坏品轮流上台，与全部好品打擂（向量化：不写内层循环）：
+    #   (p > neg)：这个坏品对全部好品的对/错表
+    #   .sum()：True 记 1 求和 = 赢的场数。例: 0.8 > [0.1, 0.3] -> [T,T] -> 2
     wins = ties = 0
     for p in pos:
         wins += int((p > neg).sum())
         ties += int((p == neg).sum())
-    # 赢 1 分、平 0.5 分、输 0 分，除以总场数 = 概率
+    # (赢场 x 1 + 平局 x 0.5) / 总场数 = 答对概率
     return (wins + 0.5 * ties) / (pos.size * neg.size)
 
 

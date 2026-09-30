@@ -78,21 +78,35 @@ def l2_distance_by_hand(u: np.ndarray, v: np.ndarray) -> float:
 def squared_channel_distance(teacher_patch: np.ndarray, student_patch: np.ndarray) -> np.ndarray:
     """迷你版异常图：逐位置算"模仿差距"，输出 (H,W) 差距热图。
 
-    输入两组特征图 (H, W, C)——每个位置 C 个数（迷你例 C=4，仓库 C=384）。
-    三步：广播逐元素减 -> 平方 -> mean(axis=-1) 压掉通道轴。
-    例（某位置，C=4）：
-      模仿到位: teacher=[1,0,1,0], student=[1,0,1,0]
-                差=0 -> 距离平方=0（正常位置分数约 0）
-      埋了异常: student=[-1,0,1,0]
-                差平方=[4,0,0,0] -> mean=1.0（该位置分数大）
-    对照 unsupervised_training/core/utils.py::predict 的
-    map_combined = mean((teacher - student)^2, dim=通道)。
+    输入是"特征图" (H, W, C)：结构同彩色图 (H,W,3)，只是每格装的
+    不是 3 个颜色数，而是 C 个"特征数"——每个位置一份 C 项体检报告
+    （迷你例 C=3，仓库 teacher/student 输出 C=384）。
+    剧情：teacher 冻结不动，student 模仿它。同一位置两份报告对齐比较，
+    像不像一个数见分晓。
+
+    三步流水线 + 1x2x3 全程手算：
+      1. 减（逐项对齐）：   teacher A格 [1.0,2.0,3.0] - student [1.1,1.9,3.2]
+                           -> [-0.1, 0.1, -0.2]      # 学得像，差都很小
+      2. 平方（翻正+重罚）：-> [0.01, 0.01, 0.04]
+                           翻正：差-0.1 和 +0.1 同算"差 0.1"，不翻正会互相抵消；
+                           重罚：0.1²=0.01（小差变小），1.5²=2.25（大差急剧放大）
+      3. mean(axis=-1) 压通道：(0.01+0.01+0.04)/3 = 0.020   # 每格 3 个数压成 1 个
+      -> 正常图输出 [[0.020, 0.007]]  shape (1,2,3) -> (1,2)
+
+    埋异常对照：student 在 B 格突然输出 [2.0, 0.0, 1.0]（模仿崩了）：
+      diff(B)=[-1.5,0.5,-0.5] -> 平方 [2.25,0.25,0.25] -> mean=0.917
+      输出 [[0.020, 0.917]]——异常位置约为正常的 46 倍，热图上"亮起来"。
+
+    为什么不开方：sqrt 不改变大小顺序（0.917>0.02 开方后仍大），
+    后续阈值/AUC 结论不变，省一次开方。
+    热图下一站：接 map_quantiles 做 90%/99.5% 分位标定（推理链由此串起）。
+    对照仓库 utils.py::predict: mean((teacher - student)^2, dim=通道)。
     """
-    # 广播逐元素减 (H,W,C)；.astype(np.float32) 先升小数（同 safe_brightness 首步）
+    # 第1步：广播逐元素减 (H,W,C)；.astype(np.float32) 先升小数（同 safe_brightness 首步）
     diff = teacher_patch.astype(np.float32) - student_patch.astype(np.float32)
-    # ** 2 逐元素平方；np.mean(..., axis=-1)：压掉最后一根轴（通道）。
+    # 第2、3步：** 2 逐元素平方；np.mean(..., axis=-1) 压掉最后一根轴（通道）。
     #   axis=-1 = 倒数第一维（编号规则见 numpy_basics.channel_means 注释）
-    #   例: [[4,0,0,0]] (1,1,4) --mean(axis=-1)--> [[1.0]] (1,1)
+    #   例: [[4, 0, 0]] (1,1,3) --平方--> [[16, 0, 0]] --mean(axis=-1)--> [[5.33]] (1,1)
     return np.mean(diff ** 2, axis=-1)
 
 

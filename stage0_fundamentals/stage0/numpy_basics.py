@@ -203,13 +203,26 @@ def safe_brightness(image: np.ndarray, factor: float) -> np.ndarray:
       4. astype(uint8)    值已全部落在 0~255，转回图像标准格式才安全。
     中间 round/clip 谁先谁后结果相同（都是单调操作）。
     """
-    # 第1、2步：先升小数再乘（uint8 直接乘，结果类型和溢出都不可控）
-    #   例: np.array([250], np.uint8).astype(np.float32) * 1.15 -> array([287.5])
+    # 第1、2步 —— 用到的 API：
+    # .astype(类型)：换容器类型，只有一个参数 = 目标类型。
+    #   例: np.array([250, 100], np.uint8).astype(np.float32)
+    #     -> array([250., 100.], dtype=float32)  # 数字没变，容器变大、能装小数
+    # * 系数：逐元素乘——整表每个格子同时乘，无需循环；
+    #   uint8 x 小数 的结果自动升级为 float（大容器），287.5 得以安全存在。
+    #   例: np.array([250.], np.float32) * 1.15 -> array([287.5])
     scaled = image.astype(np.float32) * factor
-    # 第3、4步完整数值链（以 250 x 1.15 为例）：
-    #   287.5 --round--> 288. --clip(0,255)--> 255. --astype--> 255（正确饱和）
-    #   对比错误路: 287.5 --直接 astype(uint8)--> 31（绕圈，287-256）
-    #   更多绕圈标本: np.array([300, -5]).astype(np.uint8) -> [44, 251]
+    # 第3、4步 —— 用到的 API：
+    # np.round(表)：四舍五入，一个参数 = 待取整的表。
+    #   例: np.round(np.array([287.5, 114.9])) -> array([288., 115.])
+    # np.clip(表, 下限, 上限)：超界按在边界上。三个位置参数，顺序 = 表/下限/上限。
+    #   例: np.clip(np.array([288., -3.]), 0, 255) -> array([255., 0.])
+    # .astype(np.uint8)：此刻值已全在 0~255，转回图像标准类型才不绕圈。
+    #   ⚠️ astype 是"砍小数"不是四舍五入（例: [1.7, 2.2] -> [1, 2]，1.7 砍成 1），
+    #      所以必须先 round 再 astype。
+    # 完整数值链（250 x 1.15）：
+    #   287.5 --round--> 288. --clip--> 255. --astype--> 255（正确饱和）
+    #   错误路对照: 287.5 --直接 astype(uint8)--> 31（绕圈，287-256）
+    #   绕圈标本: np.array([300, -5]).astype(np.uint8) -> [44, 251]
     return np.clip(np.round(scaled), 0, 255).astype(np.uint8)
 
 

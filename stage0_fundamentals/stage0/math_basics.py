@@ -9,6 +9,9 @@
     a) 训练损失取最难的"前 0.1%"像素（trainer.py, k = int(numel*0.999)）
     b) 异常图用 90%/99.5% 分位做归一化标定（utils.py::_map_quantiles）
 
+注释体例同 numpy_basics.py：每个 API 配"作用 + 参数 + 例: 入参 -> 出参"，
+均可在交互环境验证（.venv/Scripts/python.exe）。
+
 运行方式：
     python -m stage0.math_basics
 """
@@ -23,44 +26,73 @@ import numpy as np
 def matmul_by_hand(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     """手写矩阵乘法（三重循环定义版）。
 
-    定义：c[i,j] = sum_k a[i,k] * b[k,j]。
-    仓库里的卷积层（PDN 的 Conv2d）本质就是对每个输出位置做这样的
-    "局部窗口点积"——先懂矩阵乘，才懂卷积在算什么。
+    定义：结果 c 的第 i 行第 j 列 = a 的第 i 行 与 b 的第 j 列 对应相乘再求和。
+    比喻：a 的每一"横排"去和 b 的每一"竖列"握手，握手的费用 = 对应相乘再累加。
+    例（2x2）：
+      [[1, 2],   @   [[5, 6],   =   [[1*5+2*7, 1*6+2*8],   =   [[19, 22],
+       [3, 4]]        [7, 8]]         [3*5+4*7, 3*6+4*8]]        [43, 50]]
+    工程连接：卷积层的每个输出位置就是"局部窗口 x 卷积核"的点积——先懂
+    矩阵乘，才懂卷积在算什么。以后一律用 a @ b（np.matmul，BLAS 加速百倍）。
     """
+    # 安检：矩阵乘要求 a 的列数 == b 的行数（"中间维"相等），否则握手对不上。
+    #   例: (2,3) @ (3,4) 合法（中间都是 3）；(2,3) @ (2,3) -> raise
+    # .ndim：维数标签（2 = 矩阵）；.shape[i]：shape 元组第 i 个数
     if a.ndim != 2 or b.ndim != 2 or a.shape[1] != b.shape[0]:
         raise ValueError(f"形状不匹配: {a.shape} @ {b.shape}")
+    # .shape 解包：一行拿两个数。
+    #   例: a.shape (2,3) -> rows=2, inner=3；b.shape (3,4) -> cols=4
     rows, inner = a.shape
     inner2, cols = b.shape
 
+    # np.zeros(形状, dtype=类型)：造全 0 表当结果容器（形状参数是元组）。
+    #   例: np.zeros((2, 4), dtype=np.float64) -> 2 行 4 列全 0. 的小数表
     c = np.zeros((rows, cols), dtype=np.float64)
-    for i in range(rows):
-        for j in range(cols):
-            acc = 0.0
-            for k in range(inner):
-                acc += a[i, k] * b[k, j]
-            c[i, j] = acc
+    for i in range(rows):           # 遍历结果的每一行
+        for j in range(cols):       # 遍历结果的每一列
+            acc = 0.0               # 累加器：本次握手的合计
+            for k in range(inner):  # a 第 i 行与 b 第 j 列逐对相乘累加
+                acc += a[i, k] * b[k, j]   # a[i,k]：a 表第 i 行第 k 列那个数
+            c[i, j] = acc           # 合计填进结果格
     return c
 
 
 def l2_distance_by_hand(u: np.ndarray, v: np.ndarray) -> float:
     """手写欧氏距离：sqrt(sum_i (u_i - v_i)^2)。
 
-    仓库的逐像素异常分数 = mean_c (teacher_c - student_c)^2，
-    就是"距离平方的平均"——本函数去掉 sqrt 的版本。
+    勾股定理的高维版：(3,4) 到原点 = sqrt(3^2+4^2) = 5；384 维同理——
+    各维差平方求和再开方。
+    例: u=[0,0], v=[3,4] -> sqrt(9+16) = 5.0
+    工程连接：无监督线异常分数 = teacher 与 student 384 维特征"距离平方的
+    平均"（本函数去掉 sqrt 的版本）。距离大 = 模仿不上 = 异常——整条
+    无监督线就建立在这一个数的大小差异上。
     """
+    # np.asarray(数据, dtype=类型)：统一升 float64 再运算（u 可能是列表；
+    # 高精度小数让 384 维累加的浮点误差最小）。逐元素减：[3,4]-[0,0]->[3,4]
     diff = np.asarray(u, dtype=np.float64) - np.asarray(v, dtype=np.float64)
+    # diff ** 2：逐元素平方 [3,4]->[9,16]（负差翻正，差距不论方向）
+    # np.sum(表)：全压成一个数（9+16=25）
+    # np.sqrt(数或表)：开方。例: np.sqrt(np.array([9., 25.])) -> array([3.,  5.])
     return float(np.sqrt(np.sum(diff ** 2)))
 
 
 def squared_channel_distance(teacher_patch: np.ndarray, student_patch: np.ndarray) -> np.ndarray:
-    """迷你版异常图：两组"特征图"逐位置距离平方再对通道取平均。
+    """迷你版异常图：逐位置算"模仿差距"，输出 (H,W) 差距热图。
 
-    teacher_patch/student_patch 形状 (H, W, C)，
-    输出 (H, W)——每个位置的"模仿差距"。
+    输入两组特征图 (H, W, C)——每个位置 C 个数（迷你例 C=4，仓库 C=384）。
+    三步：广播逐元素减 -> 平方 -> mean(axis=-1) 压掉通道轴。
+    例（某位置，C=4）：
+      模仿到位: teacher=[1,0,1,0], student=[1,0,1,0]
+                差=0 -> 距离平方=0（正常位置分数约 0）
+      埋了异常: student=[-1,0,1,0]
+                差平方=[4,0,0,0] -> mean=1.0（该位置分数大）
     对照 unsupervised_training/core/utils.py::predict 的
-    map_combined = mean((teacher_output - student_output)^2, dim=通道)。
+    map_combined = mean((teacher - student)^2, dim=通道)。
     """
+    # 广播逐元素减 (H,W,C)；.astype(np.float32) 先升小数（同 safe_brightness 首步）
     diff = teacher_patch.astype(np.float32) - student_patch.astype(np.float32)
+    # ** 2 逐元素平方；np.mean(..., axis=-1)：压掉最后一根轴（通道）。
+    #   axis=-1 = 倒数第一维（编号规则见 numpy_basics.channel_means 注释）
+    #   例: [[4,0,0,0]] (1,1,4) --mean(axis=-1)--> [[1.0]] (1,1)
     return np.mean(diff ** 2, axis=-1)
 
 
@@ -71,76 +103,107 @@ def squared_channel_distance(teacher_patch: np.ndarray, student_patch: np.ndarra
 def mean_std_by_sum_sq(x: np.ndarray):
     """用 E[x^2] - E[x]^2 一步算均值和标准差（仓库 teacher_normalization 同款）。
 
-    为什么不直接 x.std()？因为流式/分桶累计时只需维护 sum 和 sum_sq 两个
-    累计量即可，不必存全部数据——仓库正是这样逐桶累计的。
-    注意：该公式有浮点误差，方差可能算出微小的负数，所以仓库用了
-    torch.sqrt(torch.relu(var)) 钳成 0；此处用 max(var, 0) 同款防御。
+    为什么不直接 x.std()：流式/分桶累计只需维护两个累加器 sum 与 sum_sq
+    （数据流过一遍就扔，不必存全量）——仓库逐桶统计 teacher 输出正是这样累计。
+    数学：方差 = 平方的平均 - 平均的平方（分配律展开可证）。
+    陷阱：浮点误差可能算出 -1e-16 的负方差，开方得 NaN -> max(var,0) 钳制，
+    与仓库 torch.sqrt(torch.relu(var)) 同款防御。
+    例: 全 3.14 的数组 -> mean=3.14, std 残渣 < 1e-6（非精确 0）。
     """
+    # .astype(np.float64)：升双精度减小累加误差
     x = x.astype(np.float64)
-    mean = x.sum() / x.size
-    mean_sq = (x ** 2).sum() / x.size
+    # x.size：元素总个数（属性）。例: np.arange(4).size -> 4
+    # x.sum()：全压成一个数
+    mean = x.sum() / x.size              # 均值 = 总和 / 个数
+    mean_sq = (x ** 2).sum() / x.size    # "平方的平均" E[x^2]
+    # 方差 = E[x^2] - E[x]^2；max(..., 0.0) 钳负保平安
     var = max(mean_sq - mean ** 2, 0.0)
+    # np.sqrt 开方得标准差（波动幅度）
     return float(mean), float(np.sqrt(var))
 
 
 def kth_smallest(x: np.ndarray, q: float) -> float:
-    """按分位比例取第 k 小的元素——torch.kthvalue 的手写版。
+    """按分位比例取"第 k 小"——torch.kthvalue 的手写版（仓库口径）。
 
-    仓库口径（务必一致）：
-      k = int(n * q)，取第 k 小（1 起数），并钳位到 [1, n]。
-    对照 unsupervised_training/core/utils.py::_map_quantiles 的
-      k_start = min(max(int(n * 0.9), 1), n)
+    比喻：n 个数从小到大排队，第 k 个出列。
+    换算：k = int(n * q)，钳位到 [1, n]（k=1 是最小值，k=n 是最大值）。
+    例: x = [0..9] 共 10 个
+      kth_smallest(x, 0.9)  k = int(10*0.9) = 9  -> 第 9 小 = 8.0
+      kth_smallest(x, 0.5)  k = 5                -> 第 5 小 = 4.0
+    仓库两处命脉：训练损失取前 0.1% 最难像素（k=int(n*0.999)）；
+    异常图 90%/99.5% 分位标定（_map_quantiles: min(max(int(n*0.9),1),n)）。
     """
+    # int(n * q)：分位比例换算成名次（直接砍小数，与仓库一致——不是四舍五入）
     n = x.size
     k = int(n * q)
+    # min/max 双向钳位：q=0 时 k=0 -> 提到 1；q 过大乘出界 -> 压到 n
     k = min(max(k, 1), n)
+    # np.sort(表)：升序排序（原表不动，返回新排队结果）。
+    #   例: np.sort([3, 1, 2]) -> array([1, 2, 3])
+    # .ravel()：拉平成一维（几维的表都铺成一条队）。
+    #   例: np.array([[1,2],[3,4]]).ravel() -> array([1, 2, 3, 4])
     sorted_asc = np.sort(np.asarray(x, dtype=np.float64).ravel())
+    # 排队后取"第 k 个"：下标从 0 数，第 k 个 = 下标 k-1
     return float(sorted_asc[k - 1])
 
 
 def map_quantiles(anomaly_map: np.ndarray):
     """迷你版分位标定：返回异常图的 90% / 99.5% 分位 (q_start, q_end)。
 
-    这两个数在仓库里的用途：推理时把原始差距图做
-      (map - q_start) / (q_end - q_start)
-    仿射归一化——"先看正常图自己的差距一般多大，以此为尺子刻度"。
+    用途（仓库 predict）：推理时 (map - q_start) / (q_end - q_start) 把原始
+    差距图仿射到"标准分"——先看"正常图自己的差距一般多大"，以此为尺子
+    刻度，异常分数才跨模型/跨点位可比。
     """
     return kth_smallest(anomaly_map, 0.9), kth_smallest(anomaly_map, 0.995)
 
 
 def hard_mining_quantile(distance_map: np.ndarray, q: float = 0.999) -> float:
-    """迷你版困难挖掘阈值：返回前 (1-q) 最难像素的下界值。
+    """迷你版困难挖掘阈值：前 (1-q) 最难像素的下界。
 
-    仓库训练损失：只对 distance >= kth_smallest(0.999) 的像素求均值。
+    仓库 trainer.py：损失只对 distance >= kth_smallest(0.999) 的像素求均值
+    ——把学习精力集中在"正常内部最难解释"的位置（分位数困难挖掘）。
+    例: n=1000, q=0.999 -> k=999 -> 返回第 999 小，约 1 个像素高过它。
     """
     return kth_smallest(distance_map, q)
 
 
 def simulate_anomaly_scores(n_ok: int = 1000, n_ng: int = 200, seed: int = 42):
-    """模拟无监督线的考试场景：OK 图分数低而集中、NG 图分数高而分散。
-
-    用于直观感受"分位数怎么从分布里切出阈值"。
-    """
+    """模拟无监督线的"考试"场景：OK 图分数低而集中、NG 图分数高而分散。"""
+    # np.random.default_rng(种子)：造一台"随机器"。同一种子 -> 同一批随机数
+    #   （可复现；本工程所有测试的确定性全靠固定种子）。
     rng = np.random.default_rng(seed)
-    ok_scores = rng.normal(0.2, 0.05, size=n_ok).clip(0, None)   # 好品分数
-    ng_scores = rng.normal(0.7, 0.12, size=n_ng).clip(0, None)   # 坏品分数
+    # rng.normal(均值, 标准差, size=个数)：从正态分布（钟形曲线）撒数。
+    #   例: rng.normal(0.2, 0.05, size=3) -> 约 [0.19, 0.24, 0.15] 一带的小数
+    # .clip(0, None)：夹紧，下限 0、上限不限（None = 该侧不设限）——分数非负。
+    ok_scores = rng.normal(0.2, 0.05, size=n_ok).clip(0, None)   # 好品：低分带
+    ng_scores = rng.normal(0.7, 0.12, size=n_ng).clip(0, None)   # 坏品：高分带
     return ok_scores, ng_scores
 
 
 def auc_by_hand(labels: np.ndarray, scores: np.ndarray) -> float:
-    """手写 AUC：随机抽一正一负，正样本分数更高的概率。
+    """手写 AUC：随机抽一好一坏，坏品分数更高的概率。
 
-    用两两比较 O(n_pos * n_neg) 的定义式实现（教学用），
-    对照 sklearn.metrics.roc_auc_score——仓库用它评估异常检测模型。
+    0.5 = 瞎猜水平（两带完全重叠）；1.0 = 完美分离。
+    例: 好品分数 [0.1, 0.3]、坏品 [0.8] -> 2 场全赢 -> AUC = 1.0
+    仓库用 sklearn.roc_auc_score（同义）；此处用定义式两两比较作教学版。
     """
+    # 布尔索引（掩码）——新姿势：比较运算先得一张对/错表，方括号拿它"挑行"。
+    #   例: scores = [0.1, 0.8, 0.3], labels = [0, 1, 0]
+    #       labels == 1          -> [False, True, False]（对/错表）
+    #       scores[labels == 1]  -> array([0.8])（只挑坏品那行）
+    #       scores[labels == 0]  -> array([0.1, 0.3])
     labels = np.asarray(labels)
     scores = np.asarray(scores, dtype=np.float64)
     pos, neg = scores[labels == 1], scores[labels == 0]
 
+    # 每个好品与整批坏品打擂台（向量化计数，不写内层循环）：
+    #   (p > neg)：一个好品对全部坏品的对/错表
+    #   .sum()：True 记 1 求和 = 赢的场数（例: 0.8 > [0.1,0.3] -> [T,T] -> 2）
     wins = ties = 0
     for p in pos:
         wins += int((p > neg).sum())
         ties += int((p == neg).sum())
+    # 赢 1 分、平 0.5 分、输 0 分，除以总场数 = 概率
     return (wins + 0.5 * ties) / (pos.size * neg.size)
 
 

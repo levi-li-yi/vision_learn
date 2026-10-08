@@ -201,11 +201,19 @@ def kth_smallest(x: np.ndarray, q: float) -> float:
 
 
 def map_quantiles(anomaly_map: np.ndarray):
-    """迷你版分位标定：返回异常图的 90% / 99.5% 分位 (q_start, q_end)。
+    """迷你版分位标定：返回异常图的 90% / 99.5% 分位——恰好 2 个数。
 
-    用途（仓库 predict）：推理时 (map - q_start) / (q_end - q_start) 把原始
-    差距图仿射到"标准分"——先看"正常图自己的差距一般多大"，以此为尺子
-    刻度，异常分数才跨模型/跨点位可比。
+    return a, b 语法上返回一个元组 (q_start, q_end)（"多个数打包"），
+    调用端按形状解包：
+        q_start, q_end = map_quantiles(amap)     # 一对一接住
+    （演示 8x8 异常图的真实输出示例：q_start=0.0049, q_end=0.0102）
+
+    两个数的业务身份 = 把异常图换成"标准分"那把尺子的两道刻度：
+      q_start（90% 分位）= "日常水位"——90% 的正常像素都不超过它；
+      q_end  （99.5% 分位）= "极端水位"——99.5% 都在其下，几乎到顶。
+    用途（仓库 predict）：score = (x - q_start) / (q_end - q_start)——
+    比 q_start 高 = 比日常离谱，比 q_end 高 = 比极端还离谱；两道刻度一立，
+    任何原始差距都能换算成"离谱多少倍"的标准分，跨模型/跨点位可比。
     """
     return kth_smallest(anomaly_map, 0.9), kth_smallest(anomaly_map, 0.995)
 

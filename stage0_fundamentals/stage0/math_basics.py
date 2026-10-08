@@ -274,8 +274,18 @@ def auc_by_hand(labels: np.ndarray, scores: np.ndarray) -> float:
         0.5 vs 0.2 赢 / 0.5 vs 0.8 输  -> 1/2 = 0.5      瞎猜水平
     三个锚点：1.0 = 完美排序 / 0.5 = 瞎猜（两队混作一团，抽一对如抛
     硬币）/ 0.0 = 全反着判。平局（分数相等）算半对记 0.5。
-    仓库用途：AUC 门控保存——新模型赢不过历史最佳就不准覆盖部署，
-    保证部署盘上的模型只会越来越好（sklearn.roc_auc_score 与此等价）。
+
+    对应仓库环节——无监督线训练结束后的"期末考试"（utils.py::test +
+    trainer 的 AUC 门控保存），本函数的 labels/scores 就是那场考试的产物：
+      1. 组考卷：合成 NG（Cut-Paste 与 OK 1:1 成对）或真实 NG 切片
+         （fetch_ng_by_qr 从生产库拉图入池）——labels 即 0=OK / 1=NG；
+      2. 打分：每张图过 teacher/student -> 找茬热图 -> 高斯模糊 ->
+         region 门控 -> 最热 TopK100 像素平均 = 图像级异常分（scores）；
+      3. 算 AUC（仓库用 sklearn.roc_auc_score，本函数是其手写教学版）->
+         ComparativeSaveManager 门控保存：新模型 AUC 赢过历史最佳，
+         才删旧 pth 写新部署权重——部署盘上的模型只会越来越好；
+      4. 同场考试还顺带按 PR-F1 选判 NG 的阈值（find_optimal_threshold），
+         逐桶再各选各的（bucket_metrics）。
     """
     # 拆两队（布尔索引：对/错表当筛子挑行）。
     #   例: labels = [0, 1, 0], scores = [0.1, 0.8, 0.3]

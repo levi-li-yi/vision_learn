@@ -1,4 +1,6 @@
 """★Demo L（本阶段通关模块）：50 行核心的手写 Teacher-Student。
+这个文件是阶段 4 的毕业作品：从零手写一个完整的 Teacher-Student 异常检测器——造数据、训练 student 抄 teacher、算距离图、定标尺、评 AUC——做完这个，无监督线你就通了。
+
 
 提纲原文要求：teacher 用预训练网络中间层冻结，student 同构小网络，
 在数据上训练，画差值热图，用分位数归一化 + AUC 评估。

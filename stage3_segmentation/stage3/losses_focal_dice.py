@@ -1,4 +1,6 @@
 """★Demo F：手写 Focal 与 Dice——core/loss_utils.py 的公式级复刻。
+这个文件教你手写两种'打分公式'(Focal 和 Dice)，并用实验证明为什么它们比普通 BCE 更适合'缺陷只占画面 1%'的工业场景。
+
 
 对应主仓库 sigmoid_focal_loss（65-100 行）与 dice_loss（142-169 行），
 以及"为什么用 Focal+Dice 组合而不用纯 BCE"的完整答案：

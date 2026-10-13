@@ -1,4 +1,6 @@
 """课时 2+3：PDN 双胞胎构建 + 分位数困难挖掘损失——modeling/trainer 复刻。
+这个文件教你两件事：①怎么构建'双胞胎'网络(teacher 冻结、student 可学、conv1 继承)；②'只罚最难的 0.1% 像素'这种损失为什么比'全平均'更有效。
+
 
 对应主仓库：
   - core/modeling.py build_teacher_student_models：teacher 冻结

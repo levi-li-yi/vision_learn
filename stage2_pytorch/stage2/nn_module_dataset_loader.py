@@ -1,4 +1,6 @@
 """课时 2：nn.Module / Dataset / DataLoader——主仓库三件套的微缩版。
+这个文件教你 PyTorch 的三件套怎么用：模型(nn.Module)、数据集(Dataset)、搬运工(DataLoader)——这是所有深度学习代码的骨架。
+
 
 对应主仓库：
   - core/seg.py 的 EfficientViTSeg(nn.Module)——forward 输入输出张量；

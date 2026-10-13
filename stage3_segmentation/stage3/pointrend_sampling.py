@@ -1,4 +1,6 @@
 """课时 3：PointRend 不确定性采样——loss_utils.loss_masks 的抽题官复刻。
+这个文件教你 PointRend 的'抽题'技巧：百万像素里只挑 6% 最难的来算损失——省算力还更有效，因为简单像素是'白算的'。
+
 
 对应主仓库（detectron2 三函数的语义）：
   1) 撒 oversample_ratio(3.0) 倍候选点（均匀随机）；

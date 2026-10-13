@@ -1,4 +1,6 @@
 """课时 6：断点五件套与 fresh/resume/finetune——base_utils/utils.py 的复刻。
+这个文件教你训练中断后怎么恢复：断点文件里存了什么(五件套)、三种重启方式(fresh/resume/finetune)各恢复哪些东西。
+
 
 对应主仓库：
   - save_trainer_state / load_trainer_state（五件套：weight/optimizer/

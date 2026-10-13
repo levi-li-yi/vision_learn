@@ -1,4 +1,6 @@
 """课时 4：AdamW 双组旋钮 + warmup→cosine 调度——trainer.__init__ 的复刻。
+这个文件教你两件事：①为什么'骨干(老手)用小步、头部(新手)用大步'；②学习率为什么要'先热身再缓降'而不是一直全速。
+
 
 对应主仓库 trainer.py 39-88 行：
   - 分组：名字以 "backbone" 开头进骨干组（lr×backbone_lr_scale），其余进 head 组；

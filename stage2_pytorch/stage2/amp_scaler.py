@@ -1,4 +1,6 @@
 """课时 5：混合精度(autocast bf16) 与 GradScaler——"快的部分快，准的部分准"。
+这个文件教你'怎么让 GPU 算得快还不出错'：用 bf16 低精度提速，但关键运算保持高精度——'快的部分快，准的部分准'。
+
 
 对应主仓库：
   - trainer.py 120-121 行 `autocast(dtype=torch.bfloat16)` 前向；

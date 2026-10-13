@@ -1,4 +1,6 @@
 """★Demo H（概念版）：SAM 的 prompt 范式 vs 本工程的纯二分类分割。
+这个文件用玩具代码演示 SAM 的'prompt 范式'——同一张图，你在哪里点一下(prompt)，模型就分割哪里；对比本工程'没有 prompt、只判是不是缺陷'的闭集方式。注意：这里不用真的 SAM，是自己搭的小网。
+
 
 真实作业（README）：跑 facebookresearch/segment-anything，用点/框
 prompt 玩几张图。本模块离线呈现两者的**范式差异**——

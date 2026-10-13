@@ -7,3 +7,9 @@ __pycache__/
 
 # pytest 缓存
 .pytest_cache/
+
+# 训练实验产物
+checkpoints/
+samples/
+cifar_data/
+_heat.png

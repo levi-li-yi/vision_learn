@@ -50,13 +50,36 @@ def to_gray(image_bgr: np.ndarray) -> np.ndarray:
 # ---------------------------------------------------------------------------
 
 def crop_roi(image: np.ndarray, x0: int, y0: int, size: int) -> np.ndarray:
-    """按仓库口径裁 patch：image[y0:y0+size, x0:x0+size]。
+    """按仓库口径裁 patch：从 (x0, y0) 起抠一块 size×size 的方形小图。
+    ROI = Region Of Interest（感兴趣区域），主仓库叫"切 patch"。
 
-    关键坐标纪律（全工程通用）：
-      NumPy 切片下标顺序是 [y, x]（行、列）；
-      而 cv2 函数的尺寸/坐标参数几乎都是 (x, y)（宽、高）——warpAffine 的
-      dsize=(w,h)、phaseCorrelate 返回 (dx,dy)。两套顺序并存，写代码前先想清楚。
+    比喻：像在 Excel 里框选一片单元格——报坐标的习惯是 (列, 行)，但真去取
+    数据时得先定位行。本函数唯一的易错点就是这层错位：
+
+      ★ 参数顺序 (x0, y0) 与切片顺序 [y, x] 正好相反
+        图是 (H, W) 的行列表：切片第 1 个下标管"行(y)"、第 2 个管"列(x)"。
+
+    小学算术（测试同款 img = np.arange(30).reshape(5, 6)，5 行 6 列）：
+        crop_roi(img, x0=2, y0=1, size=3)
+          -> image[1 : 1+3, 2 : 2+3] = image[1:4, 2:5]  取第 1,2,3 行 × 第 2,3,4 列
+          -> [[ 8,  9, 10],
+              [14, 15, 16],
+              [20, 21, 22]]
+        断言钉死: patch[0,0] == img[1,2] == 8            （先 y 后 x）
+
+    ★ 写反了不报错：写成 image[x0:x0+size, y0:y0+size] 形状仍是 3×3，只是抠错
+      了地方（上例会变成 13,14,15 / 19,20,21 / 25,26,27）。静默 bug，外在只
+      表现为"框整体偏了"——所以测试专门用 patch[0,0] == img[1,2] 守着。
+
+    坐标纪律（全工程通用）：NumPy 用 [y, x]，而 cv2 的尺寸/坐标参数几乎都是
+      (x, y)——warpAffine 的 dsize=(w,h)、phaseCorrelate 返回 (dx,dy)。两套并存，
+      交接点就是下面这行切片。
+
+    另注：返回值是视图（零拷贝、共享原图内存），改 patch 会波及原图，要独立
+      副本需 .copy()。切片三条铁律（含头不含尾等）见 stage0.numpy_basics.crop_patch。
     """
+    # 逗号前 = 行(y/高)、逗号后 = 列(x/宽)：参数里的 y0/x0 在此处对调
+    #   例: y0=1, x0=2, size=3 -> image[1:4, 2:5]
     return image[y0: y0 + size, x0: x0 + size]
 
 
@@ -65,11 +88,44 @@ def crop_roi(image: np.ndarray, x0: int, y0: int, size: int) -> np.ndarray:
 # ---------------------------------------------------------------------------
 
 def gaussian_kernel_1d(ksize: int, sigma: float) -> np.ndarray:
-    """一维高斯核：exp(-x^2 / 2*sigma^2) 归一化，长度 ksize（奇数），中心为 0。"""
+    """造一条"钟形权重表"（一维高斯核）：模糊时给每个邻居按"离得多近"打分，
+    正中间的自己权重最大、越远的邻居越小——像一台打分器，不是把邻居等权平均。
+
+    手算造表三步（ksize=5, sigma=1.0）：
+      1) xs = np.arange(5) - 5//2 = [0,1,2,3,4] - 2 = [-2,-1,0,1,2]
+         减 ksize//2 是把坐标中心对齐到 0（公式里要用 x²，必须对称）
+      2) exp(-x² / 2σ²)，此处 2σ² = 2：
+           x²      = [4,    1,     0,   1,     4]
+           -x²/2   = [-2.0, -0.5,  0.0, -0.5,  -2.0]
+           exp(..) = [0.1353, 0.6065, 1.0, 0.6065, 0.1353]
+                                              ↑ 中心 x=0 得 exp(0)=1（峰值），
+                                                向两侧衰减 -> 自然长成钟形
+      3) 除以总和 2.4837 归一化：
+           kernel  = [0.0545, 0.2442, 0.4026, 0.2442, 0.0545]   权重和 = 1
+
+    ★ 第 3 步归一化是灵魂：不除的话权重和 = 2.48，加权求和会把每个像素放大
+      2.48 倍——整幅图变亮。除完和为 1，"加权求和"就成了"加权平均"，亮度不变。
+      测试钉两条：sum==1；左右对称（k == k[::-1]）。
+
+    σ 是"胖瘦旋钮"（ksize=7 时的中心权重）：
+        σ=0.5 -> 0.787（瘦，几乎不糊） | σ=1 -> 0.399 | σ=2 -> 0.216（胖，糊）
+      ksize 要盖得住钟形的胖度，经验值 ksize ≈ 6σ+1 取奇数——太小会砍掉钟形的
+      尾巴，太大则两端权重≈0 白算（σ=0.5 配 ksize=7，两端正好是 0.0）。
+      仓库口径：无监督 eval 的固定后处理 GaussianBlur(33,33,σ4) 就是大 σ 抹平。
+
+    为什么先写 1D：高斯可分离——二维钟形 = 横一维 ⊗ 纵一维（外积），所以二维
+      模糊能拆成两次一维，计算量 k² -> 2k，这正是 cv2.GaussianBlur 快的原因之一
+      （见下方 gaussian_kernel_2d）。
+    对拍：与 cv2.getGaussianKernel(ksize, sigma)[:, 0] 逐位一致（atol=1e-8）。
+    """
+    # 偶数核没有唯一的正中心（长度 4 的"中间"是条缝），直接拒绝
     if ksize % 2 == 0:
         raise ValueError("ksize 必须是奇数")
+    # 造坐标轴并把中心对齐到 0：例 ksize=5 -> [-2,-1,0,1,2]
     xs = np.arange(ksize) - ksize // 2
+    # 高斯公式 exp(-x²/2σ²)：x=0 处 =1（峰值），两侧按 σ 衰减，合起来是钟形
     kernel = np.exp(-(xs ** 2) / (2 * sigma ** 2))
+    # 归一化：权重和变 1，加权求和 -> 加权平均，图不变亮也不变暗
     return kernel / kernel.sum()
 
 
@@ -81,14 +137,46 @@ def gaussian_kernel_2d(ksize: int, sigma: float) -> np.ndarray:
 
 
 def manual_gaussian_blur(gray: np.ndarray, ksize: int = 3, sigma: float = 1.0) -> np.ndarray:
-    """手写二维高斯模糊：reflect 填充 + 滑窗视图 + einsum 加权求和。
+    """手写二维高斯模糊：把每个像素换成"它和邻居的加权平均"，权重即钟形核。
 
-    与 cv2.GaussianBlur 对拍：默认 border BORDER_REFLECT_101 == np.pad 'reflect'。
+    四步流水线：
+      1) kernel = gaussian_kernel_2d(ksize, sigma)   造 k×k 钟形权重表（见上）
+      2) padded = np.pad(gray, r, mode="reflect")    边缘"照镜子"补 r 圈，r = ksize//2
+         为何补 r：像素的邻域是 i-r..i+r；不补则边缘像素没有完整邻居（黑边/越界）。
+         reflect = 以边缘为轴翻折、边缘不重复自己 == cv2 的 BORDER_REFLECT_101，
+         也正是 cv2.GaussianBlur 的默认边界（对拍能对上就靠它）。
+      3) windows = sliding_window_view(padded, (ksize, ksize))   给每个像素配邻域
+      4) np.einsum("ijkl,kl->ij", windows, kernel)               邻域加权求和
+
+    ★ 第 3 步最反直觉，换个说法（4×4 图、ksize=3）：
+      结果 = "H×W 个格子、每格装一张 k×k 小表"，形状 (H, W, k, k)——
+          前两维 = 第几个像素，后两维 = 它的那张小表。
+      等价于这个双层循环（自己跑一遍就懂）：
+          result = np.zeros((H, W, k, k))
+          for i in range(H):
+              for j in range(W):
+                  result[i, j] = padded[i:i+k, j:j+k]
+      -> 4×4 图得到 4×4 个格子、每格 3×3；相邻格子只差一格，就是"窗口在滑动"。
+      格子数 = (H+2r) - k + 1 = H：正因为补了 r 圈，输出的格子数才刚好等于原图
+      尺寸，且每格正中心对准一个原像素。
+      与循环版的唯一区别：result[i,j]=... 是真拷贝；sliding_window_view 是视图、
+      一字节不拷，只改"读法"(strides)——大图上内存差几十倍。
+
+    einsum 只记一条规则：字母出现在 -> 右边 = 保留，没出现 = 求和消掉。
+      "ijkl,kl->ij" 即 i,j 保留（每个像素各算）、k,l 求和（邻域内加权相加）。
+
+    为什么开头 .astype(np.float32)：加权平均必出小数；且 cv2.GaussianBlur 对 uint8
+      走定点快速实现、与手写浮点版差约 1 灰度级，只有 float32 才逐位一致。
     """
+    # 1) k×k 钟形权重表（两个 1D 核外积，见 gaussian_kernel_2d）
     kernel = gaussian_kernel_2d(ksize, sigma)
+    # r = ksize//2 是邻域半径；补 r 圈后窗口起点数正好等于原图边长，输出不失真
     r = ksize // 2
+    # 2) 边缘"照镜子"补 r 圈（float32 才与 cv2 对得齐）
     padded = np.pad(gray.astype(np.float32), r, mode="reflect")
-    windows = sliding_window_view(padded, (ksize, ksize))     # (H, W, k, k)
+    # 3) 每像素的 k×k 邻域：视图，形状 (H, W, k, k)，零拷贝
+    windows = sliding_window_view(padded, (ksize, ksize))
+    # 4) i,j 保留、k,l 求和：每个像素的邻域加权平均 = 模糊后的值
     return np.einsum("ijkl,kl->ij", windows, kernel)
 
 

@@ -28,6 +28,9 @@ from .train_loop import train_one_epoch, accuracy
 # ---------------------------------------------------------------------------
 
 class ConvBlock(nn.Module):
+    """
+    残差块：卷积+捷径(输入直加输出)——学"增量"比学"全部"容易。
+    """
     def __init__(self, cin, cout):
         super().__init__()
         self.net = nn.Sequential(nn.Conv2d(cin, cout, 3, padding=1, bias=False),
@@ -59,6 +62,9 @@ class SmallResNet(nn.Module):
 # ---------------------------------------------------------------------------
 
 def make_loaders(batch_size=64, smoke=True, data_dir=None):
+    """
+    构建 DataLoader；smoke 用合成数据(免下载)，real 用 CIFAR-10。
+    """
     import torchvision
     import torchvision.transforms as T
     tf_train = T.Compose([T.ToTensor(), T.Normalize((0.5,)*3, (0.5,)*3)])
@@ -85,6 +91,10 @@ def make_loaders(batch_size=64, smoke=True, data_dir=None):
 def run_training(epochs=2, smoke=True, data_dir=None, ckpt=None,
                  resume=False, accumulation_steps=1, lr=1e-3,
                  backbone_lr_scale=1.0, warmup_steps=50, device=None):
+    """Demo C 完整训练：热身+余弦调度、梯度裁剪、bf16、断点保存/续训。
+
+    对应主仓库 train_entry.run() 的单卡版——所有"高级"技巧全在这。
+    """
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
     train_loader, test_loader = make_loaders(smoke=smoke, data_dir=data_dir)
     model = SmallResNet().to(device)

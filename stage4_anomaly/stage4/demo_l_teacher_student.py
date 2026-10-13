@@ -64,6 +64,9 @@ def make_ng(ok_batch, seed=1):
 # ---------------------------------------------------------------------------
 
 class FeatureNet(nn.Module):
+    """
+    双胞胎共用特征网络：两层卷积（teacher 冻结/student 可学）。
+    """
     def __init__(self):
         super().__init__()
         self.conv1 = nn.Conv2d(3, 16, 5, stride=2, padding=2)
@@ -74,6 +77,9 @@ class FeatureNet(nn.Module):
 
 
 def build_pair(seed=0):
+    """
+    构建 T-S 对：teacher 冻结、student 同构可学、conv1 继承。
+    """
     torch.manual_seed(seed)
     teacher = FeatureNet()
     for p in teacher.parameters():
@@ -90,6 +96,9 @@ def build_pair(seed=0):
 # ---------------------------------------------------------------------------
 
 def train_student(teacher, student, ok, steps=300, lr=2e-3, seed=0):
+    """
+    只在好件上训练 student（抄 teacher 归一化后的答卷）。
+    """
     torch.manual_seed(seed)
     opt = torch.optim.AdamW([p for p in student.parameters()
                              if p.requires_grad], lr=lr)
@@ -111,12 +120,18 @@ def train_student(teacher, student, ok, steps=300, lr=2e-3, seed=0):
 
 @torch.no_grad()
 def anomaly_map(teacher, student, imgs, mean, std):
+    """
+    算一批图的异常图：teacher(归一化) vs student 的逐像素距离²。
+    """
     t = (teacher(imgs) - mean) / std
     s = student(imgs)
     return ((t - s) ** 2).mean(1, keepdim=True)                # [N,1,h,w]
 
 
 def evaluate(teacher, student, ok_test, ng_imgs, mean, std):
+    """
+    完整评估：异常图→分位标尺→TopK100 打分→AUC。
+    """
     amap_ok = anomaly_map(teacher, student, ok_test, mean, std)
     amap_ng = anomaly_map(teacher, student, ng_imgs, mean, std)
     qs, qe = map_quantiles(amap_ok)                            # val 池定标尺
@@ -127,6 +142,9 @@ def evaluate(teacher, student, ok_test, ng_imgs, mean, std):
 
 
 def run(steps=300, seed=0, save=None):
+    """
+    Demo L 端到端入口：造数据→训练→评估→(可选)存热图。
+    """
     torch.manual_seed(seed)
     ok_train = make_ok(32, seed=0)                             # 教材：纯好件
     ok_test = make_ok(16, seed=7)                              # 参考：定标尺

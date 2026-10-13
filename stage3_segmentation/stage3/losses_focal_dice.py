@@ -88,6 +88,9 @@ def lazy_solution_penalty(loss_fn) -> float:
 # ---------------------------------------------------------------------------
 
 class TinySegNet(nn.Module):
+    """
+    两层卷积的迷你分割网——用于对比不同损失的收敛差异。
+    """
     def __init__(self):
         super().__init__()
         self.net = nn.Sequential(nn.Conv2d(1, 8, 3, padding=1), nn.ReLU(),
@@ -98,6 +101,9 @@ class TinySegNet(nn.Module):
 
 
 def train_with(loss_name, epochs=60, seed=0):
+    """
+    用指定损失训练 TinySegNet 若干步，返回最终 P/R——不平衡对比。
+    """
     torch.manual_seed(seed)
     imgs, masks = make_learnable_imbalance(seed=1)      # 可学任务：亮块=答案
     net = TinySegNet()

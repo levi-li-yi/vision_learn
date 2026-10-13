@@ -53,6 +53,9 @@ class PlainEncDec(nn.Module):
 
 
 def dice_score(pred, target, eps=1e-7):
+    """
+    Dice 分数：预测和答案的重合程度(1=完美)。
+    """
     inter = (pred * target).sum()
     return (2 * inter + eps) / (pred.sum() + target.sum() + eps)
 
@@ -78,6 +81,9 @@ def make_shape_dataset(n=32, size=64, seed=0):
 
 
 def train_seg(net, imgs, masks, steps=80, lr=3e-3):
+    """
+    训练一个小分割网（BCE+Dice 组合损失），返回最终 Dice。
+    """
     opt = torch.optim.AdamW(net.parameters(), lr=lr)
     for _ in range(steps):
         opt.zero_grad()
@@ -91,6 +97,9 @@ def train_seg(net, imgs, masks, steps=80, lr=3e-3):
 
 
 def dice_loss(logits, targets):
+    """
+    Dice 损失 = 1 - Dice 分数；逐样本展平算(整图面积视角)。
+    """
     p = torch.sigmoid(logits).flatten(1); t = targets.flatten(1)
     return (1 - (2 * (p * t).sum(-1) + 1) / (p.sum(-1) + t.sum(-1) + 1)).mean()
 

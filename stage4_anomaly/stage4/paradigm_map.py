@@ -43,6 +43,9 @@ def roc_auc(labels: torch.Tensor, scores: torch.Tensor) -> float:
 # ---------------------------------------------------------------------------
 
 class TinyAE(nn.Module):
+    """
+    最小自编码器：压缩到 2 维再还原——重建误差=异常分。
+    """
     def __init__(self, dim=8, hidden=2):
         super().__init__()
         self.enc = nn.Linear(dim, hidden)
@@ -53,6 +56,9 @@ class TinyAE(nn.Module):
 
 
 def score_autoencoder(ok_train, all_x, epochs=300, seed=0):
+    """
+    范式一(重建)：只学好件，重建误差大 = 异常。
+    """
     torch.manual_seed(seed)
     ae = TinyAE(ok_train.shape[1])
     opt = torch.optim.Adam(ae.parameters(), lr=1e-2)
@@ -68,6 +74,9 @@ def score_autoencoder(ok_train, all_x, epochs=300, seed=0):
 # ---------------------------------------------------------------------------
 
 def score_teacher_student(ok_train, all_x, epochs=300, seed=0):
+    """
+    范式二(师生)：teacher 冻结、student 学抄，抄不像 = 异常。
+    """
     torch.manual_seed(seed)
     teacher = nn.Linear(ok_train.shape[1], 16); teacher.requires_grad_(False)
     student = nn.Linear(ok_train.shape[1], 16)
@@ -86,6 +95,9 @@ def score_teacher_student(ok_train, all_x, epochs=300, seed=0):
 # ---------------------------------------------------------------------------
 
 def score_memory_bank(bank: torch.Tensor, all_x: torch.Tensor) -> torch.Tensor:
+    """
+    范式三(记忆库/PatchCore mini)：最近邻距离 = 异常分。
+    """
     d = torch.cdist(all_x, bank)                        # [N, bank]
     return d.min(1).values                              # 到最近正常样本的距离
 
@@ -95,6 +107,9 @@ def score_memory_bank(bank: torch.Tensor, all_x: torch.Tensor) -> torch.Tensor:
 # ---------------------------------------------------------------------------
 
 def score_cutpaste(ok_train, all_x, epochs=200, seed=0):
+    """
+    范式四(合成/CutPaste 特征版)：替换 30% 维度造伪异常训二分类。
+    """
     torch.manual_seed(seed)
     g = torch.Generator().manual_seed(seed + 1)
     n, dim = ok_train.shape

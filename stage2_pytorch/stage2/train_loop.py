@@ -46,6 +46,9 @@ def train_one_epoch(model, loader, optimizer, accumulation_steps=1,
 
 @torch.no_grad()
 def accuracy(model, loader):
+    """
+    算模型在 loader 上的分类准确率（评估用，不算梯度）。
+    """
     model.eval()
     hit = tot = 0
     for x, y in loader:

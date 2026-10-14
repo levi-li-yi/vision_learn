@@ -13,13 +13,23 @@ import numpy as np
 
 
 def label_components(binary: np.ndarray):
-    """cv2.connectedComponentsWithStats：一次拿到标签图 + 每域统计。
+    """cv2.connectedComponentsWithStats：给"每一团白像素"编号 + 一次拿到每域统计。
+    流水线从这里由"像素级"进入"对象级"——往后才有"第几个缺陷、在哪、多大"
+    （-> 面积过滤、画框、写 summary.csv）。
 
     返回 (num, labels, stats, centroids)：
-      num       连通域个数（含背景 0 号）
-      labels    与输入同尺寸的 int32 图，每个像素属于哪个域
-      stats     (num, 5)：[left, top, width, height, area]（注意前四项是 x,y,w,h）
-      centroids (num, 2)：每个域的质心 (cx, cy)
+      num       连通域个数（含背景 0 号——真目标数 = num - 1，所以循环从 1 开始）
+      labels    与输入同尺寸的 int32 图，每个像素属于哪个域；编号按光栅扫描顺序
+                （从上到下、左到右第一次遇到）发；也是反查表：labels == i 就是
+                第 i 号对象的像素（filter_by_area 靠它保留某个域）
+      stats     (num, 5)：[left, top, width, height, area]——前四项是 (x, y, 宽,
+                高)不是 (左, 上, 右, 下)；area 是像素个数；0 号（背景）行 bbox
+                覆盖整幅图、area 含白块内部的洞（洞不算独立域），统计时不看它
+      centroids (num, 2)：每个域的质心 (cx, cy) = 白像素坐标的平均；2×2 方块的
+                质心 = (7.5, 5.5)，会有半个像素的小数
+
+    connectivity 写死 8：斜角也算"挨着"——实测两个斜角相接的方块，8 连通算 1 团、
+    4 连通算 2 团；写死是为了统一口径（否则两人数出的缺陷个数可能不一致）。
     """
     return cv2.connectedComponentsWithStats(binary, connectivity=8)
 

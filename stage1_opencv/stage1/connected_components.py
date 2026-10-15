@@ -13,23 +13,36 @@ import numpy as np
 
 
 def label_components(binary: np.ndarray):
-    """cv2.connectedComponentsWithStats：给"每一团白像素"编号 + 一次拿到每域统计。
-    流水线从这里由"像素级"进入"对象级"——往后才有"第几个缺陷、在哪、多大"
-    （-> 面积过滤、画框、写 summary.csv）。
+    """把"一堆白格子"整理成"带编号的对象清单"——二值图 -> 编号图（连通域分析）。
 
-    返回 (num, labels, stats, centroids)：
-      num       连通域个数（含背景 0 号——真目标数 = num - 1，所以循环从 1 开始）
-      labels    与输入同尺寸的 int32 图，每个像素属于哪个域；编号按光栅扫描顺序
-                （从上到下、左到右第一次遇到）发；也是反查表：labels == i 就是
-                第 i 号对象的像素（filter_by_area 靠它保留某个域）
-      stats     (num, 5)：[left, top, width, height, area]——前四项是 (x, y, 宽,
-                高)不是 (左, 上, 右, 下)；area 是像素个数；0 号（背景）行 bbox
-                覆盖整幅图、area 含白块内部的洞（洞不算独立域），统计时不看它
-      centroids (num, 2)：每个域的质心 (cx, cy) = 白像素坐标的平均；2×2 方块的
-                质心 = (7.5, 5.5)，会有半个像素的小数
+    核心就一件事：把黑白图翻译成"编号图"——每个格子里的数字 = 它属于第几团。
+    人一眼看得出下图有 3 团，程序不知道；这个函数负责数出来、编上号：
 
-    connectivity 写死 8：斜角也算"挨着"——实测两个斜角相接的方块，8 连通算 1 团、
-    4 连通算 2 团；写死是为了统一口径（否则两人数出的缺陷个数可能不一致）。
+        原图（#=白）      labels（每个数 = 该格属于几号团）
+        ........          0 0 0 0 0 0 0 0   <- 0 号 = 背景（所有黑格子）
+        .##..##.          0 1 1 0 0 2 2 0   <- 左上 2x2 = 1 号
+        .##..##.          0 1 1 0 0 2 2 0
+        ........          0 0 0 0 0 0 0 0
+        #.......          3 0 0 0 0 0 0 0   <- 左下孤点 = 3 号
+
+    "挨着"就算一团：上下左右 + 斜角都算（connectivity=8；实测斜角串 8 连通算 1 团、
+    4 连通算 3 团——写死 8 是为了统一口径，否则两人数出的缺陷个数可能对不上）。
+    发号顺序 = 从上到下、从左到右扫描，谁先被碰到谁先发号，没有别的含义。
+
+    返回 (num, labels, stats, centroids) = 围绕编号图的四个答案：
+      num       一共几团——含背景 0 号，真目标数 = num - 1（所以循环从 1 开始）
+      labels    上面的编号图（int32）；也是反查表：labels == i 就是"只含 i 号团"
+                的图——filter_by_area 靠它把某一团整团保留或扔掉
+      stats     (num, 5)：每团 [left, top, w, h, area]。left/top 是包围盒左上角
+                坐标 (x, y)（不是左/上/右/下）；area 是白格子个数；例：1 号团 =
+                [1, 1, 2, 2, 4]。0 号（背景）行 bbox 覆盖整幅图、area 含白块内部
+                的洞（洞不算独立域），统计时从不看它
+      centroids (num, 2)：每团中心 (cx, cy) = 白格坐标的平均；例 1 号 = (1.5, 1.5)
+                ——会有半个像素的小数
+
+    业务位置：质检报告要写"检出 3 个缺陷、每个在哪、多大"，mask 只有像素，这份
+    清单就是它的活（-> summary.csv）。实现 = cv2.connectedComponentsWithStats，
+    唯一动的手脚是把 connectivity 写死为 8。
     """
     return cv2.connectedComponentsWithStats(binary, connectivity=8)
 
@@ -62,11 +75,37 @@ def filter_by_area(binary: np.ndarray, min_area: int) -> np.ndarray:
 
 
 def external_contours(binary: np.ndarray):
-    """外轮廓版统计：findContours + boundingRect + contourArea。
+    """外轮廓版统计：换个口径数缺陷——connectedComponents 是"数格子"，这里是
+    "描边"：把每一团白像素的外边界描成一条闭合折线（当成多边形），量出 bbox、
+    折线面积、周长。
 
-    与 connectedComponents 的分工（仓库两处都在用）：
-      - connectedComponents：要"每一团"的编号/面积/质心 -> 面积过滤、统计表；
-      - findContours：要"外边缘折线" -> 画红框高亮、算周长。
+    返回 [{"bbox": (x,y,w,h), "area": 折线面积, "perimeter": 周长}, ...]，按面积
+    降序；没有 id/质心，也没有 min_area 过滤——它只负责"量"，不负责"筛"。
+
+    ★ 两种口径实测对照（同一张图，像素口径见 components_report）：
+                        像素口径    折线口径（这里）
+        40×40 方块        1600      1521 = 39×39（周长 156 = 4×39）
+        60×20 长条        1200      1121 = 59×19
+        圆 r=15           709≈πr²   666（周长 98.9 > 2πr≈94.2，锯齿）
+        单像素            1         0（周长也是 0）
+      为什么小一圈：折线沿"像素中心"走——40 像素宽的两端中心只隔 39 格。最狠的
+      是单像素：折线只有 1 个点、围不出面积，contourArea = 0——拿它做 min_area
+      过滤会出事，两种口径别混用。
+
+    ★ 逐行要点：
+      findContours(binary, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE)
+        RETR_EXTERNAL       只要最外圈轮廓、不管白块内部的洞——函数名的由来
+        CHAIN_APPROX_SIMPLE 折线压缩、直边只留拐点（实测：40×40 方块 -> 4 个点，
+                            圆 -> 52 个点）；返回的 contours 顺序不保证（所以末尾
+                            要 sort）；一条 contour 是 (N,1,2) 的 (x,y) 点列
+      boundingRect(contour)   套"最小正矩形"（轴对齐），返回 (x,y,w,h)——和 stats
+                              同口径，可直接喂 draw_boxes
+      contourArea / arcLength(c, True)   多边形面积 / 闭合折线总长（True=首尾连上）
+
+    分工（仓库两处都在用）：要像素口径的面积、统计表、summary.csv 用
+    connectedComponents（见 components_report）；要画红框高亮、算周长、轮廓几何
+    用这里（无监督 eval 的红框三联图）。口径警示：同一张图两人量出的缺陷面积可能
+    差一成（1600 vs 1521）——不是 bug 是口径，定验收标准前先对齐"这 1 像素算不算"。
     """
     contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     results = []

@@ -929,6 +929,97 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
   <p>每个 epoch 的题量 = <b>切块数 × 2(一半纯净、一半贴缺陷)× 每块 5 个变体</b>。所有块和缺陷<b>不落盘</b>:每个样本的缺陷由定死的种子确定性再生——<b>同一下标每次合成出完全相同的缺陷</b>,等效于一个固定题池但不占磁盘;每轮变化的只有刷题顺序和读取时的随机增强。</p>
   <p><b>抽素材的规则</b>(assets.py):先<b>等概率</b>选一个绑定目录、再<b>等概率</b>选其中一张素材(一个分区绑多目录 = 混着贴);全部素材在启动时<b>一次性预处理并常驻内存</b>(读入时掩码按 &gt;127 二值化、去背景、垫边,之后反复取用,不再碰磁盘——LRU 不淘汰,因为预处理只做这一次)。<b>贴到哪个分区</b>:块内与各分区有效像素交集超过 <span class="kn">100px</span> 的分区中随机挑一个,贴 <span class="kn">1</span> 个缺陷;落点再避开底图已有的真实缺陷标注区。</p>
 
+  <figure class="fig">
+    <svg viewBox="0 0 680 260" role="img" aria-label="抽素材两步抽签与素材常驻内存示意:先等概率挑目录再等概率挑素材,启动时一次性预处理常驻内存">
+      <text x="170" y="26" text-anchor="middle" class="tb">① 抽素材 = 两步抽签(等概率)</text>
+      <rect x="28" y="44" width="138" height="64" rx="8" fill="#fdf0e7" stroke="#15803d" stroke-width="2.2"/>
+      <text x="97" y="60" text-anchor="middle" class="tb">assets/砂眼/</text>
+      <text x="97" y="74" text-anchor="middle" class="tm">(10 张)</text>
+      <path d="M46,92 C52,89 58,93 59,99 C60,106 54,110 48,110 C42,110 38,105 39,99 C40,94 42,92 46,92 Z" class="defect"/>
+      <circle cx="95" cy="88" r="17" fill="none" stroke="#15803d" stroke-width="1.6" stroke-dasharray="4 3"/>
+      <path d="M95,79 C102,77 108,82 108,89 C108,97 101,101 95,101 C89,101 85,96 86,90 C87,85 90,81 95,79 Z" class="defect"/>
+      <path d="M133,93 C138,91 143,95 143,100 C143,106 137,109 132,108 C127,107 125,102 127,98 C128,95 130,94 133,93 Z" class="defect"/>
+      <rect x="180" y="44" width="138" height="64" rx="8" fill="#fbfaf6" stroke="#d8d2c0" stroke-width="1.6"/>
+      <text x="249" y="60" text-anchor="middle" class="tb">assets/划痕/</text>
+      <text x="249" y="74" text-anchor="middle" class="tm">(90 张)</text>
+      <ellipse cx="212" cy="90" rx="15" ry="4.5" class="defect"/>
+      <ellipse cx="252" cy="93" rx="12" ry="4" class="defect"/>
+      <ellipse cx="292" cy="88" rx="14" ry="4" class="defect"/>
+      <text x="170" y="128" text-anchor="middle" class="t" fill="#15803d">第①步:两个目录等概率 → 抽中「砂眼」</text>
+      <text x="170" y="146" text-anchor="middle" class="t" fill="#15803d">第②步:箱内等概率 → 抽中第 2 张</text>
+      <rect x="45" y="158" width="250" height="56" rx="8" fill="#eaf2fe" stroke="#93b4f5" stroke-width="1.6"/>
+      <path d="M78,180 C86,177 93,182 93,190 C93,199 86,203 79,203 C72,203 68,197 69,190 C70,185 73,182 78,180 Z" class="defect"/>
+      <path d="M81,187 C86,185 90,189 90,194 C90,199 86,201 82,201 C78,201 76,198 77,194 C77,191 79,188 81,187 Z" class="defectd"/>
+      <text x="185" y="182" text-anchor="middle" class="t">选中素材 → (patch, mask) 一对</text>
+      <text x="185" y="200" text-anchor="middle" class="tm">带着规格 {area, 800~2500} 送去贴</text>
+      <text x="170" y="242" text-anchor="middle" class="tm" fill="#b45309">目录级公平:砂眼哪怕只有 10 张,被抽中的机会仍占一半</text>
+
+      <text x="510" y="26" text-anchor="middle" class="tb">② 一次性备菜,常驻内存</text>
+      <rect x="360" y="48" width="80" height="50" rx="8" fill="#e9f6ee" stroke="#86d3a1" stroke-width="1.8"/>
+      <text x="400" y="70" text-anchor="middle" class="tb">启动</text>
+      <text x="400" y="86" text-anchor="middle" class="tm">一次</text>
+      <path d="M 444,73 L 466,73" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
+      <rect x="472" y="44" width="192" height="58" rx="8" fill="#fdf0e7" stroke="#e7b58a" stroke-width="1.8"/>
+      <text x="568" y="64" text-anchor="middle" class="t">全部素材一次性预处理</text>
+      <text x="568" y="84" text-anchor="middle" class="tm">掩码&gt;127 二值化 · 抹背景 · 垫 1px</text>
+      <path d="M 568,106 L 568,122" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
+      <rect x="360" y="126" width="304" height="64" rx="8" fill="#fbfaf6" stroke="#8a8477" stroke-width="1.6"/>
+      <text x="511" y="144" text-anchor="middle" class="tb">常驻内存的素材架(预处理过的成品)</text>
+      <g class="defect" opacity=".85">
+        <circle cx="382" cy="166" r="9"/>
+        <circle cx="422" cy="168" r="11"/>
+        <circle cx="464" cy="164" r="8"/>
+        <circle cx="506" cy="167" r="10"/>
+        <circle cx="548" cy="165" r="9"/>
+        <circle cx="590" cy="168" r="11"/>
+        <circle cx="632" cy="165" r="8"/>
+      </g>
+      <text x="511" y="212" text-anchor="middle" class="tm">出题时直接抓取,不再碰磁盘</text>
+      <text x="511" y="228" text-anchor="middle" class="tm" fill="#15803d">LRU 永不淘汰——预处理只做这一次,倒掉就亏了</text>
+    </svg>
+    <figcaption>抽素材两步抽签:先在绑定目录里等概率挑一个"抽奖箱",再在箱内等概率抽一张(目录级公平——素材少的目录也稳占一半机会);素材库启动时一次性预处理(二值化/抹背景/垫边)并常驻内存,出题时直接取用。</figcaption>
+  </figure>
+
+  <div class="co plain">
+    <span class="tag">💡 大白话:抽奖箱 + 食堂备菜</span>
+    <p><b>抽奖箱</b>:assets.jsonc 里"加工面"绑了砂眼、划痕两个目录,就是两个抽奖箱——先等概率挑箱子,再在箱里等概率抽一张。箱子层面公平:哪怕砂眼只有 10 张、划痕有 90 张,两类被贴出的机会仍各占一半(想改比例,改绑定即可)。<b>食堂备菜</b>:开工前把所有菜洗好、切好、装盘(启动时一次性预处理),出餐时直接抓——不为每一张订单现跑一趟菜场(重新读盘+处理)。</p>
+  </div>
+
+  <figure class="fig">
+    <svg viewBox="0 0 680 250" role="img" aria-label="选分区与落点避让示意:块内与分区交集超100px的进候选池,随机挑一个,落锚点避开真缺陷标注区">
+      <text x="125" y="26" text-anchor="middle" class="tb">③ 本切块(512×512)</text>
+      <rect x="30" y="36" width="190" height="190" rx="6" class="metal"/>
+      <rect x="34" y="90" width="14" height="90" fill="#16a34a" opacity=".3"/>
+      <text x="41" y="82" text-anchor="middle" class="tm" fill="#166534">✗</text>
+      <path d="M95,55 C130,48 180,52 205,70 C218,85 215,150 200,175 C175,200 120,205 95,185 C75,168 72,110 80,80 C83,66 88,58 95,55 Z" fill="#3b82f6" opacity=".16"/>
+      <path d="M95,55 C130,48 180,52 205,70 C218,85 215,150 200,175 C175,200 120,205 95,185 C75,168 72,110 80,80 C83,66 88,58 95,55 Z" fill="none" stroke="#2563eb" stroke-width="1.2" stroke-dasharray="5 4"/>
+      <circle cx="135" cy="105" r="24" fill="none" stroke="#15803d" stroke-width="1.4" stroke-dasharray="4 3"/>
+      <line x1="135" y1="97" x2="135" y2="113" stroke="#15803d" stroke-width="1.4"/>
+      <line x1="127" y1="105" x2="143" y2="105" stroke="#15803d" stroke-width="1.4"/>
+      <path d="M135,95 C143,92 151,98 151,107 C151,117 143,121 135,121 C127,121 122,114 124,106 C125,101 130,97 135,95 Z" class="defect"/>
+      <path d="M138,102 C143,100 147,104 147,109 C147,114 143,116 139,116 C135,116 133,112 134,108 C135,105 136,103 138,102 Z" class="defectd"/>
+      <text x="135" y="78" text-anchor="middle" class="tm" fill="#15803d">随机锚点 ✓</text>
+      <ellipse cx="168" cy="160" rx="22" ry="13" fill="#eab308" opacity=".55"/>
+      <text x="168" y="188" text-anchor="middle" class="tm" fill="#b45309">真缺陷标注区(避开)</text>
+      <text x="125" y="220" text-anchor="middle" class="tm" fill="#1e40af">加工面∩本块 ≈ 8000px &gt; 100 ✓ 候选</text>
+
+      <rect x="250" y="40" width="415" height="40" rx="8" fill="#eaf2fe" stroke="#cddbfc"/>
+      <text x="262" y="65" class="t">1. 数一数:本块与每个「绑了资产的分区」的交集多大</text>
+      <rect x="250" y="90" width="415" height="40" rx="8" fill="#eaf2fe" stroke="#cddbfc"/>
+      <text x="262" y="115" class="t">2. 交集 &gt; 100px 的分区进候选池——绿条只交 30px,淘汰</text>
+      <rect x="250" y="140" width="415" height="40" rx="8" fill="#eaf2fe" stroke="#cddbfc"/>
+      <text x="262" y="165" class="t">3. 从候选池随机挑 1 个分区(本例挑中「加工面」)</text>
+      <rect x="250" y="190" width="415" height="40" rx="8" fill="#e9f6ee" stroke="#c8e8d3"/>
+      <text x="262" y="215" class="t">4. 在 分区∩有效像素、且避开真缺陷标注 的范围里落锚点,贴 1 个缺陷</text>
+    </svg>
+    <figcaption>选分区与落点避让:不是全图乱贴——先看本块与各分区的交集,超过 100px 的才有资格当候选(左侧绿条只蹭到 30px 的边角,直接淘汰);随机挑一个候选分区后,锚点还要避开底图上已有的真缺陷标注区(合成缺陷绝不叠在真缺陷上)。</figcaption>
+  </figure>
+
+  <div class="co plain">
+    <span class="tag">💡 大白话:倒车入位</span>
+    <p>往分区里贴缺陷像倒车入位:停车场有很多车位(各分区),<b>先看哪些车位够大</b>(与本块交集 &gt; 100px 才算真车位);<b>随机挑一个够大的</b>;再在车位里<b>绕开障碍物</b>(底图真缺陷标注)<b>随机选个位置停进去</b>(落锚点、贴 1 个缺陷)。蹭到边的不算车位,压障碍物的位置不选。</p>
+  </div>
+
   <div class="co plain">
     <span class="tag">💡 大白话:按编号复刻的菜谱</span>
     <p>"确定性再生"像按编号出菜的中央厨房:第 1024 号菜的所有<b>随机调料配方(种子)是写死的</b>——今天做和明天做,端出来的缺陷一模一样;每天变的只是上菜顺序。好处:几千道题不用存硬盘(现点现做),而且排查问题时有据可查——同一道题任何时候重做,结果可对照。</p>

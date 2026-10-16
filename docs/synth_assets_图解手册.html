@@ -1,0 +1,1848 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>synth_assets 图解白话手册 · 零基础版</title>
+<style>
+:root{
+  --bg:#f6f4ee; --paper:#ffffff; --ink:#2c2a25; --muted:#6f6a5e;
+  --line:#e6e1d3; --blue:#2563eb; --blue-deep:#1e40af; --blue-soft:#eaf2fe; --blue-line:#cddbfc;
+  --orange:#c2410c; --orange-soft:#fdf0e7;
+  --green:#15803d; --green-soft:#e9f6ee; --green-line:#c8e8d3;
+  --red:#dc2626; --red-soft:#fdecec;
+  --amber:#b45309; --amber-soft:#fdf6e3; --amber-line:#f0e2b6;
+  --purple:#6d28d9; --purple-soft:#f3eefe; --purple-line:#ddd3f8;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.85 "Segoe UI","Microsoft YaHei","PingFang SC","Hiragino Sans GB",sans-serif}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+p{margin:10px 0}
+ul,ol{margin:8px 0;padding-left:24px}
+li{margin:4px 0}
+small{color:var(--muted)}
+
+/* ===== 顶部横幅 ===== */
+.hero{background:linear-gradient(135deg,#1e3a8a,#2563eb 55%,#0e9bd8);color:#fff;padding:44px 22px 38px}
+.hero-in{max-width:1150px;margin:0 auto}
+.hero h1{margin:0 0 6px;font-size:30px;line-height:1.35;font-weight:700}
+.hero .sub{font-size:16.5px;opacity:.94;margin:0 0 14px}
+.heropills{display:flex;flex-wrap:wrap;gap:8px}
+.heropills span{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.35);
+  border-radius:999px;padding:3px 14px;font-size:13px}
+.hero svg{margin-top:18px}
+
+/* ===== 布局 ===== */
+.wrap{max-width:1200px;margin:0 auto;padding:26px 22px 90px;display:grid;
+  grid-template-columns:238px minmax(0,1fr);gap:42px}
+.sidebar{position:sticky;top:0;align-self:start;max-height:100vh;overflow-y:auto;padding:6px 8px 20px 0}
+.sidebar .tt{font-size:12.5px;color:var(--muted);letter-spacing:2px;margin:8px 0 8px 10px}
+.sidebar a{display:block;padding:5px 10px;border-radius:8px;color:#4b463c;font-size:14px}
+.sidebar a:hover{background:#fff;text-decoration:none;color:var(--blue)}
+.sidebar a.on{background:var(--blue);color:#fff}
+main{min-width:0}
+
+/* ===== 章节标题 ===== */
+section{scroll-margin-top:14px;margin-bottom:60px}
+.chap{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.chapno{flex:none;background:var(--blue);color:#fff;border-radius:8px;padding:2px 11px;
+  font-size:13.5px;font-weight:700}
+.chap h2{font-size:24px;margin:0}
+.chapref{color:var(--muted);font-size:13px;margin:4px 0 16px}
+h3{font-size:18.5px;margin:28px 0 8px;border-left:4px solid var(--blue-line);padding-left:10px}
+h4{font-size:16px;margin:18px 0 6px}
+
+/* ===== 提示框 ===== */
+.co{border-radius:10px;padding:12px 16px 10px;margin:14px 0;border:1px solid transparent}
+.co .tag{display:inline-block;font-size:12.5px;font-weight:700;border-radius:999px;
+  padding:1px 11px;margin-bottom:6px}
+.co p{margin:6px 0}
+.co.plain{background:var(--blue-soft);border-color:var(--blue-line)}
+.co.plain .tag{background:var(--blue);color:#fff}
+.co.why{background:var(--green-soft);border-color:var(--green-line)}
+.co.why .tag{background:var(--green);color:#fff}
+.co.warn{background:var(--amber-soft);border-color:var(--amber-line)}
+.co.warn .tag{background:var(--amber);color:#fff}
+.co.story{background:var(--purple-soft);border-color:var(--purple-line)}
+.co.story .tag{background:var(--purple);color:#fff}
+
+/* ===== 名词卡片 ===== */
+.terms{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin:14px 0}
+.term{background:var(--paper);border:1px solid var(--line);border-radius:10px;
+  padding:10px 13px;font-size:14.5px}
+.term b{color:var(--blue-deep);display:block;margin-bottom:2px}
+.term small{font-size:13px}
+
+/* ===== 插图 ===== */
+figure.fig{background:var(--paper);border:1px solid var(--line);border-radius:12px;
+  padding:16px 14px 8px;margin:18px 0}
+figure.fig svg{width:100%;height:auto;display:block}
+figure.fig figcaption{font-size:13.5px;color:var(--muted);margin-top:8px;text-align:center;line-height:1.6}
+
+/* ===== 表格 ===== */
+.tscroll{overflow-x:auto;margin:14px 0}
+table.tbl{width:100%;border-collapse:collapse;font-size:14.5px;background:var(--paper)}
+.tbl th{background:#efece1;text-align:left}
+.tbl th,.tbl td{border:1px solid var(--line);padding:8px 11px;vertical-align:top;line-height:1.7}
+.tbl td code,.tbl th code{white-space:nowrap}
+
+/* ===== 代码 ===== */
+pre.code{background:#111827;color:#e5e7eb;border-radius:10px;padding:13px 16px;
+  overflow-x:auto;font:13px/1.75 Consolas,"Cascadia Code","Courier New",monospace;margin:14px 0}
+pre.code .cm{color:#8bb88b}
+code.inl{background:#efece1;border:1px solid var(--line);border-radius:5px;padding:0 5px;
+  font:.92em Consolas,"Cascadia Mono",monospace;color:var(--amber);overflow-wrap:anywhere}
+pre.tree{background:#fbfaf6;border:1px solid var(--line);border-radius:10px;padding:14px 16px;
+  overflow-x:auto;font:12.8px/1.8 Consolas,"Cascadia Mono",monospace;margin:14px 0}
+.tree .d{color:#1d4ed8;font-weight:600}
+.tree .f{color:#3f3a30}
+.tree .a{color:#b45309}
+.tree .k{color:#15803d;font-weight:600}
+
+/* ===== 高亮数字 ===== */
+.kn{font-family:Consolas,"Cascadia Mono",monospace;font-weight:700;color:#1d4ed8;
+  background:var(--blue-soft);border:1px solid var(--blue-line);border-radius:6px;
+  padding:0 6px;white-space:nowrap;font-size:.92em}
+
+/* ===== 流程图(HTML 盒子) ===== */
+.flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:6px;margin:16px 0}
+.fbox{flex:1 1 160px;border:2px solid #93b4f5;border-radius:12px;background:var(--blue-soft);
+  padding:10px 12px;font-size:14px;line-height:1.7}
+.fbox b{display:block;color:var(--blue-deep)}
+.fbox small{color:#5b5648}
+.fbox.gold{border-color:#e7b58a;background:var(--orange-soft)}
+.fbox.gold b{color:var(--orange)}
+.farr{align-self:center;color:#7a8699;font-size:20px;font-weight:700;padding:0 2px}
+.fnote{font-size:13.5px;color:var(--muted);margin-top:6px}
+
+/* ===== 四步总览 ===== */
+.stp{position:relative;margin:0 0 14px;padding:14px 16px 12px 66px;background:var(--paper);
+  border:1px solid var(--line);border-radius:12px;counter-increment:st}
+.steps{counter-reset:st}
+.stp::before{content:counter(st);position:absolute;left:14px;top:14px;width:40px;height:40px;
+  border-radius:11px;background:var(--blue);color:#fff;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:19px}
+.stp h4{margin:0 0 4px;font-size:16.5px}
+.stp .svr{display:inline-block;font-size:12px;background:var(--purple-soft);color:var(--purple);
+  border:1px solid var(--purple-line);border-radius:999px;padding:0 9px;margin-left:6px;vertical-align:2px}
+.stp ul{margin:6px 0 2px}
+
+/* ===== 掩码生命周期时间线 ===== */
+.tl{position:relative;margin:18px 0;padding-left:38px;border-left:3px solid var(--blue-line)}
+.tli{position:relative;margin-bottom:26px}
+.tli::before{content:attr(data-n);position:absolute;left:-54px;top:2px;width:32px;height:32px;
+  border-radius:50%;background:var(--blue);color:#fff;font-weight:700;display:flex;
+  align-items:center;justify-content:center;font-size:15px}
+.tli .tlhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin-bottom:4px}
+.tli .tlhead b{font-size:16.5px}
+.tli .tlhead code{font-size:12.5px;color:var(--muted)}
+.tlcard{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 15px}
+.tlcard p{margin:6px 0}
+.minifigs{display:flex;flex-wrap:wrap;gap:12px;margin:10px 0 4px}
+.minifig{flex:0 1 auto;text-align:center}
+.minifig svg{width:150px;height:auto;display:block;margin:0 auto}
+.minifig small{display:block;font-size:12px;color:var(--muted);line-height:1.5;margin-top:3px;max-width:170px}
+
+/* ===== 质量门控漏斗 ===== */
+.funnel{display:flex;flex-direction:column;align-items:center;gap:6px;margin:16px 0}
+.fnode{border:2px solid #93b4f5;background:var(--blue-soft);border-radius:10px;
+  padding:7px 20px;font-size:14.5px;text-align:center;line-height:1.7}
+.fnode.ok{border-color:#86d3a1;background:var(--green-soft)}
+.fnode.bad{border-color:#f0a5a5;background:var(--red-soft)}
+.fvarr{color:#7a8699;font-size:17px;line-height:1}
+
+/* ===== 命令卡片 ===== */
+.cmdcard{background:var(--paper);border:1px solid var(--line);border-radius:12px;
+  padding:15px 17px;margin:16px 0}
+.cmdcard h4{margin:0 0 8px}
+.cmdline{background:#0f172a;color:#7dd3fc;border-radius:8px;padding:9px 13px;
+  font:13.5px/1.6 Consolas,"Cascadia Mono",monospace;overflow-x:auto;white-space:pre;margin:8px 0}
+.cmdline .pr{color:#94a3b8}
+
+/* ===== 两栏卡片 ===== */
+.duo{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin:14px 0}
+.duo .card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.duo .card h4{margin:0 0 6px}
+
+/* ===== 回到顶部 ===== */
+#topBtn{position:fixed;right:18px;bottom:18px;width:42px;height:42px;border-radius:50%;
+  border:1px solid var(--line);background:var(--paper);color:var(--blue);font-size:18px;
+  cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.12);z-index:9}
+#topBtn:hover{background:var(--blue-soft)}
+
+footer{border-top:1px solid var(--line);color:var(--muted);font-size:13px;text-align:center;padding:22px}
+
+/* ===== SVG 公用填充类 ===== */
+svg .metal{fill:#dcd9d1}
+svg .metalln{stroke:#c6c2b6;stroke-width:1}
+svg .defect{fill:#8f3412}
+svg .defectd{fill:#5f2109}
+svg .maskov{fill:#3b82f6;opacity:.30}
+svg .ringg{fill:#f59e0b;opacity:.42}
+svg .ignore{fill:#eab308;opacity:.55}
+svg .t{font-size:12.5px;fill:#4a453b}
+svg .tb{font-size:12.5px;fill:#23211c;font-weight:600}
+svg .tm{font-size:11px;fill:#8a8477}
+svg .dashb{stroke:#2563eb;stroke-width:1.7;stroke-dasharray:6 4;fill:none}
+svg .dasho{stroke:#b45309;stroke-width:1.5;stroke-dasharray:5 4;fill:none}
+svg .lead{stroke:#9aa2b1;stroke-width:1}
+
+/* ===== 响应式 ===== */
+@media(max-width:1020px){
+  .wrap{grid-template-columns:1fr;gap:0;padding-top:10px}
+  .sidebar{position:static;max-height:none;overflow:visible;display:flex;flex-wrap:wrap;
+    gap:6px;border-bottom:1px solid var(--line);padding:4px 0 14px}
+  .sidebar .tt{display:none}
+  .sidebar a{background:var(--paper);border:1px solid var(--line);border-radius:999px;
+    padding:2px 12px;font-size:13px}
+  .sidebar a.on{background:var(--blue);border-color:var(--blue);color:#fff}
+}
+@media print{
+  .sidebar,#topBtn{display:none}
+  .wrap{display:block}
+  body{background:#fff}
+}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-in">
+    <h1>《synth_assets》图解白话手册</h1>
+    <p class="sub">工业缺陷数字资产合成实施方案 · 写给纯技术新手的大白话 + 图解版</p>
+    <div class="heropills">
+      <span>📖 源文档:docs/synth_assets_plan.md</span>
+      <span>✅ 全部技术点无删减覆盖</span>
+      <span>🖼️ 十余张手绘示意图</span>
+      <span>⏱️ 通读约 30 分钟</span>
+    </div>
+    <svg viewBox="0 0 900 96" role="img" aria-label="一个真实缺陷裂变成许多合成缺陷的示意">
+      <text x="10" y="20" fill="#cfe1ff" font-size="12.5">几个真实缺陷(几张~几十张)</text>
+      <path d="M60,44 C74,40 88,48 90,60 C92,74 80,84 66,84 C52,84 42,74 44,60 C45,50 52,46 60,44 Z" fill="#fbbf24"/>
+      <path d="M100,52 C107,50 114,55 114,62 C114,70 107,74 100,74 C93,74 88,69 88,62 C88,56 93,53 100,52 Z" fill="#f59e0b"/>
+      <text x="170" y="66" fill="#fff" font-size="22" font-weight="700">→</text>
+      <text x="150" y="24" fill="#cfe1ff" font-size="12.5">synth_assets 裂变兵工厂</text>
+      <path d="M215,50 h44" stroke="#93c5fd" stroke-width="2" stroke-dasharray="5 4"/>
+      <g fill="#f59e0b">
+        <path d="M285,52 C295,48 306,54 307,64 C308,75 298,82 288,80 C278,78 274,68 278,60 C280,55 282,53 285,52 Z"/>
+        <path d="M345,38 C360,34 374,42 376,55 C378,70 366,80 352,78 C339,76 334,64 338,53 C340,44 342,40 345,38 Z" transform="rotate(18 356 58)"/>
+        <path d="M420,58 C428,55 436,60 436,68 C436,77 428,82 420,80 C412,78 408,71 411,64 C413,60 416,59 420,58 Z"/>
+        <ellipse cx="480" cy="66" rx="12" ry="9" transform="rotate(-14 480 66)"/>
+        <path d="M525,50 C540,46 554,54 556,66 C558,79 548,87 536,85 C524,83 519,72 523,62 C525,55 522,52 525,50 Z" transform="rotate(-10 540 66)"/>
+        <path d="M590,44 C600,40 612,46 614,58 C616,71 606,80 595,78 C585,76 581,66 584,57 C586,50 587,46 590,44 Z" transform="rotate(24 599 60)"/>
+        <ellipse cx="655" cy="58" rx="9" ry="12" transform="rotate(30 655 58)"/>
+        <path d="M700,52 C711,48 722,55 723,66 C724,77 715,84 705,82 C695,80 691,70 694,61 C696,55 697,54 700,52 Z" transform="rotate(-22 708 65)"/>
+        <ellipse cx="760" cy="64" rx="13" ry="8"/>
+        <path d="M805,48 C817,44 828,52 829,63 C830,75 821,83 810,81 C800,79 796,69 799,60 C801,53 802,50 805,48 Z" transform="rotate(12 813 63)"/>
+        <ellipse cx="862" cy="56" rx="10" ry="10"/>
+      </g>
+      <text x="890" y="24" text-anchor="end" fill="#cfe1ff" font-size="12.5">数百对合成素材(形态各异、带精准掩码)</text>
+    </svg>
+  </div>
+</header>
+
+<div class="wrap">
+<nav class="sidebar" aria-label="章节目录">
+  <div class="tt">目 录</div>
+  <a href="#intro">第0章 · 开场白</a>
+  <a href="#terms">第1章 · 新手词表</a>
+  <a href="#positioning">第2章 · 解决什么问题</a>
+  <a href="#dirs">第3章 · 文件放在哪</a>
+  <a href="#pipeline">第4章 · 四步流水线总览</a>
+  <a href="#step1">第5章 · Step 1 切图准备</a>
+  <a href="#step2">第6章 · Step 2 LoRA训练</a>
+  <a href="#step3">第7章 · Step 3 形态裂变重绘</a>
+  <a href="#step4">第8章 · Step 4 差分抠图</a>
+  <a href="#masklife">第9章 · 掩码的一生</a>
+  <a href="#designqa">第10章 · 设计问答</a>
+  <a href="#commands">第11章 · 常用命令</a>
+  <a href="#configs">第12章 · 配置逐字段讲</a>
+  <a href="#cheatsheet">第13章 · 数字速查表</a>
+</nav>
+
+<main>
+
+<!-- ================= 第 0 章 ================= -->
+<section id="intro">
+  <div class="chap"><span class="chapno">第 0 章</span><h2>开场白:一个工厂的故事</h2></div>
+  <div class="chapref">对应原文 §一「项目定位」的背景铺垫</div>
+
+  <div class="co story">
+    <span class="tag">📖 先听个故事</span>
+    <p>想象你管着一条金属零件的质检产线。相机给零件拍照,你想让电脑<b>自动找出照片里的瑕疵</b>(行业黑话叫"缺陷",比如<b>砂眼</b>——金属表面的小坑、<b>划痕</b>——细长的刮痕)。</p>
+    <p>要教会电脑认缺陷,得给它看<u>成千上万张</u>"标好了哪里是缺陷"的照片。可现实很骨感:整批零件里可能就<b>几张到几十张</b>真有缺陷。老师傅只能对着这几张照片,把每个缺陷一小块一小块<u>手动抠出来</u>存成素材——又慢又累,还远远不够喂饱电脑。</p>
+    <p><b>synth_assets 就是为这件事而生的</b>:把几十个真缺陷"裂变"成几百个长相不同、光影逼真的新缺陷素材,<b>全自动</b>,而且每个新素材都自带一张"哪里是缺陷"的精确标记图——电脑直接拿来学习,人工一个都不用抠。</p>
+  </div>
+
+  <h3>这份手册怎么读?</h3>
+  <ul>
+    <li>每章开头标注了它对应原文档的哪一节,方便对照着看;</li>
+    <li>正文里遇到看不懂的词,随时回<b>第 1 章词表</b>查;</li>
+    <li>看到 <span class="kn">8px</span> 这种蓝色小方块,是全文反复出现的关键数字,第 13 章有一张完整速查表;</li>
+    <li>四种彩色提示框的含义:</li>
+  </ul>
+  <div class="duo">
+    <div class="card"><h4>💡 蓝色框 · 大白话</h4><p style="margin:4px 0;font-size:14.5px">用生活比喻把刚才的技术讲一遍。</p></div>
+    <div class="card"><h4>🎯 绿色框 · 为什么</h4><p style="margin:4px 0;font-size:14.5px">解释"这步为什么非这么做不可"。</p></div>
+    <div class="card"><h4>⚠️ 黄色框 · 注意</h4><p style="margin:4px 0;font-size:14.5px">新手容易踩的坑、容易误解的点。</p></div>
+    <div class="card"><h4>📖 紫色框 · 故事</h4><p style="margin:4px 0;font-size:14.5px">用完整的小故事建立整体感觉。</p></div>
+  </div>
+</section>
+
+<!-- ================= 第 1 章 ================= -->
+<section id="terms">
+  <div class="chap"><span class="chapno">第 1 章</span><h2>新手词表:先搞懂这些词,后文畅通无阻</h2></div>
+  <div class="chapref">原文档里出现的所有"黑话"都在这里,按主题分组</div>
+
+  <h3>🖼️ 看图基础</h3>
+  <div class="terms">
+    <div class="term"><b>像素(pixel)</b>图片由几百万个小方格拼成,每个方格叫一个像素,记录一个颜色。后面说的所有"图上的操作",本质都是在对这些小方格做数学。</div>
+    <div class="term"><b>灰度</b>只论明暗、不管彩色的"黑白程度"。通常 0 = 最黑,255 = 最白。工业检测大多先把图转成灰度来分析。</div>
+    <div class="term"><b>.bmp 文件</b>一种不压缩的图片格式,工业相机常用。画质无损、细节一根汗毛都不丢,代价是文件比较大。</div>
+    <div class="term"><b>掩码(Mask)</b>和原图同样大小的一张"透明胶片":白色的地方(值为 1)表示"这里是缺陷",黑色的地方(值为 0)表示"这里不是"。<b>像素级精准掩码</b>= 精确到每一个小方格的对错判定。</div>
+    <div class="term"><b>二值图</b>只有两种值的图(0 和 1,或 0 和 255)。掩码、形态模板存的都是二值图,像"剪纸模板"。</div>
+    <div class="term"><b>多边形标注(.bmp.tmp)</b>人工沿着缺陷边缘点一圈点、连成一个多边形,存进与原图同名的 <code class="inl">.bmp.tmp</code> 文件里,每条标注带个标签(label):「砂眼」「划痕」或「排除」。</div>
+    <div class="term"><b>外接矩形</b>恰好能把一个图形完整框住的最小正方向矩形。Step 4 落盘时按掩码的外接矩形来裁小图。</div>
+    <div class="term"><b>底噪 σ(西格玛)</b>干净金属上亮度的微小随机波动——像安静教室里的呼吸声。σ 是这股波动的"幅度统计值"(标准差)。后面 "<span class="kn">3.5σ</span>" 的意思是:比呼吸声大 3.5 倍才算真动静。</div>
+  </div>
+
+  <h3>🤖 AI 绘图相关</h3>
+  <div class="terms">
+    <div class="term"><b>模型 / 权重</b>模型 = 一套会画图的"电子大脑";权重 = 大脑里亿万个数字旋钮。<code class="inl">lora_weights.safetensors</code> 就是存旋钮参数的文件。</div>
+    <div class="term"><b>FLUX.1-Fill-dev</b>一个专业 AI 修图大模型(Fill = 填充/修复版),特长是"把图上指定的一块区域重新画一遍,且和四周衔接得天衣无缝"。black-forest-labs 公司出品,配置里那串 <code class="inl">black-forest-labs/FLUX.1-Fill-dev</code> 是它在 HuggingFace 模型库里的"门牌号"。</div>
+    <div class="term"><b>LoRA</b>不动大模型本体,只在旁边外挂一小块"专项记忆补丁",专门学会画某一类缺陷。文件小、训练快,一类缺陷配一个。<b>lora_rank</b> 是补丁的"记忆容量"数字。</div>
+    <div class="term"><b>触发词(trigger_token)</b>唤起 LoRA 记忆的"暗号"。画图时在提示里写上它(比如 <code class="inl">[DEF_HT12_砂眼]</code>),补丁才知道该掏出砂眼的画法。像上课点名,喊到才答"到"。</div>
+    <div class="term"><b>重绘(inpaint)</b>AI 画图的基本功:把图上被掩码遮住的区域重新画出来,没遮住的地方一律不动。本文里说"AI 局部重绘"就是这事。</div>
+    <div class="term"><b>损失(Loss)</b>给 AI 的画"打分扣分"的数字:画得越离谱分越高。训练就是一遍遍画、一遍遍扣分、一遍遍拧旋钮,让分数降下来。</div>
+    <div class="term"><b>bfloat16</b>一种"小数位数少一号"的数字记法。精度略降但省一半显存、算得更快,是大模型训练的标配,FLUX.1 原生就用它。</div>
+    <div class="term"><b>显存 / A40</b>显存 = 显卡上给 AI 计算用的"工作台面";A40 是 NVIDIA 的数据中心专业显卡(48GB 大显存)。"双 A40 服务器" = 装了两块 A40 的机器,笔记本跑不动,训练得靠它。</div>
+    <div class="term"><b>safetensors</b>一种安全的模型参数保存格式(文件后缀名),比老格式不容易被塞恶意代码,业界现在都用它。</div>
+    <div class="term"><b>seed(随机种子)</b>随机数的"起点密码"。固定它,同样的输入每次得到完全同样的结果——实验可复现全靠它。</div>
+  </div>
+
+  <h3>🧩 图像处理手法</h3>
+  <div class="terms">
+    <div class="term"><b>膨胀(dilate)</b>把图形均匀"吹胖"几像素的操作。"外扩 8px"就是沿轮廓膨胀 8px。反义词是<b>腐蚀(erode)</b>(搓瘦)——OpenCV 的泊松克隆内部会偷偷往内腐蚀 4px,后文会专门提防它。</div>
+    <div class="term"><b>双线性插值</b>旋转/缩放图片时,新位置的像素取它旁边 4 个像素加权平均来填,过渡平滑不生硬。</div>
+    <div class="term"><b>高斯柔化</b>按"中间浓、四周淡"的钟形曲线把边缘轻微模糊,让 0/1 的硬边变成 0~1 的软渐变。</div>
+    <div class="term"><b>羽化</b>让贴图的边缘从"完全不透明"平滑过渡到"完全透明",避免贴上去留一圈硬切边。"余弦羽化" = 按余弦曲线来滑,过渡特别顺。</div>
+    <div class="term"><b>弹性变形</b>给图形叠加一张平滑的随机"位移场",每个点被推去方向不同、距离不同的位置——像揉橡皮泥,形状变了但风格没变。</div>
+    <div class="term"><b>差分</b>两张图逐像素相减,变了的地方数值凸出来。玩过"大家来找茬"吗?两幅图叠在一起对比,不同处自动现形,就是这个原理。</div>
+    <div class="term"><b>大津法(Otsu)</b>自动选"黑白分界线"的经典老办法,强行把画面按比例分成亮暗两半。缺陷很小、背景噪点多时会翻车(把噪点切成"缺陷")——所以本文改用"底噪倍数卡线"。</div>
+    <div class="term"><b>信噪比 / 峰值信噪比</b>信号强度 ÷ 噪声强度,衡量"有多醒目"。峰值 = 最大那一处。本文规定:最大差值不到底噪的 3.5 倍,就判定"根本没画出缺陷"。</div>
+    <div class="term"><b>泊松融合(seamlessClone)</b>OpenCV 的"无缝克隆":解一个泊松方程,把缺陷的<b>明暗变化规律</b>融进底图,让灯光、质感自然衔接——不是把贴纸硬拍上去,而是让缺陷"长"在金属上。</div>
+    <div class="term"><b>分桶(bucketing)</b>训练时把同样尺寸的图凑成一批(batch)送进显卡。图片尺寸乱七八糟就得拆很多桶,批次对不齐、显存被切碎浪费(碎片化)。</div>
+  </div>
+
+  <h3>🏗️ 工程协作</h3>
+  <div class="terms">
+    <div class="term"><b>仓库(repo)/ GitLab</b>仓库 = 一个项目的文件夹 + 完整的修改历史记录;GitLab 是团队存放仓库的平台(类似"带版本历史的团队网盘")。</div>
+    <div class="term"><b>CLI / uv</b>CLI = 命令行界面,就是在黑窗口里敲命令。uv 是 Python 项目的快速安装运行工具,<code class="inl">uv run synth ...</code> 一条命令自动配好环境再启动程序。</div>
+    <div class="term"><b>JSON</b>机器友好的数据格式:大括号 + "键: 值",一层层嵌套。<b>不许写注释</b>,专供程序读写。</div>
+    <div class="term"><b>JSONC</b>允许写 <code class="inl">//</code> 和 <code class="inl">/* */</code> 注释的 JSON,给人看的配置用——现场人员可以直接在文件里写备注说明。</div>
+    <div class="term"><b>manifest.json</b>代码自动生成的"出厂铭牌",记录这个模型是给谁训的、怎么训的、用了多少样本。</div>
+    <div class="term"><b>.tmp/ 目录</b>草稿目录:一切中间过程文件都丢这儿,随时整目录删除不心疼。gitignore = 声明"这些文件不进版本管理"。</div>
+    <div class="term"><b>原子化交付</b>要么全部一次交齐,要么一件不发,绝不让半成品留在正式目录里。像快递"整箱签收",没有"先到半箱"这回事。</div>
+    <div class="term"><b>点位</b>产线上相机拍照工位的编号,比如 <code class="inl">JXFB-1-P1</code>、<code class="inl">JXFB-1-P5</code>。一个产品通常有多个点位。</div>
+    <div class="term"><b>分区</b>基准图上划出的区域定义(存于 <code class="inl">{基准图名}.json</code>),比如"加工面"——规定哪块区域是待检面,缺陷只允许出现在合法分区里。</div>
+  </div>
+
+  <div class="co warn">
+    <span class="tag">⚠️ 两个最容易混的词</span>
+    <p><b>缺陷类型</b>(砂眼、划痕)是"病种";<b>点位</b>(P1、P5)是"相机机位"。目录结构里两者都会出现,别搞混。</p>
+  </div>
+</section>
+
+<!-- ================= 第 2 章 ================= -->
+<section id="positioning">
+  <div class="chap"><span class="chapno">第 2 章</span><h2>项目定位:synth_assets 到底解决什么问题?</h2></div>
+  <div class="chapref">对应原文 §一「项目定位:解决什么问题?」</div>
+
+  <h3>痛点:两个"要命"</h3>
+  <ol>
+    <li><b>真实缺陷样本极少</b>——只有几张到几十张。想教会电脑认缺陷,这个量远远不够。</li>
+    <li><b>人工抠素材太费劲</b>——老师傅要逐个把缺陷从大图里抠出来,每抠一个缺陷要产出<b>一对</b>文件:
+      <ul>
+        <li><code class="inl">{名}.png</code>:缺陷小图本体(从原图上裁下来的那一小块);</li>
+        <li><code class="inl">{名}_mask.png</code>:同尺寸掩码图,标明小图里"哪几个像素是缺陷"。</li>
+      </ul>
+    </li>
+  </ol>
+
+  <h3>定位:一座"缺陷素材裂变兵工厂"</h3>
+  <p>原文给 synth_assets 的定位就一句话——<b>"缺陷素材裂变兵工厂"</b>。拆开念:</p>
+  <ul>
+    <li><b>裂变</b>:一个变几百个。输入少量真缺陷,输出数百对形态各异的新缺陷素材;</li>
+    <li><b>兵工厂</b>:专门量产"弹药"(训练素材)的车间,不干别的;</li>
+    <li><b>不改动现有训练架构</b>:它<u>不重复造轮子</u>——"把缺陷贴到大图上"(大图贴图)和"训练分割模型"这两件事分别是 train 仓库的老本行,synth_assets 绝不抢活,只管把素材造出来。</li>
+  </ul>
+
+  <div class="co plain">
+    <span class="tag">💡 大白话</span>
+    <p>把 synth_assets 想成一家<b>"缺陷照相馆"</b>:你交给它几只真砂眼当"模特",它先让 AI 画师学透砂眼长什么样(Step 2 训练),然后让画师换着姿势、换着光线拍几百张"艺术照"(Step 3 生成),拍完自动修片、自动裁剪、自动附上"缺陷在哪"的标记卡(Step 4),最后整整齐齐码进素材库,给下游的 train 仓库随取随用。</p>
+  </div>
+
+  <h3>输入吃什么,输出吐什么</h3>
+  <div class="flow">
+    <div class="fbox"><b>📥 输入(全是现成的)</b><small>直接读 <code class="inl">datasets/{产品}/{点位}/</code> 下已有的:<br>① 真实图像 <code class="inl">.bmp</code><br>② 多边形标注 <code class="inl">.bmp.tmp</code><br>③ 分区定义 <code class="inl">{基准图名}.json</code></small></div>
+    <div class="farr">→</div>
+    <div class="fbox gold"><b>🏭 synth_assets</b><small>缺陷素材训练与裂变合成<br>(本文档主角,仓库 ②)</small></div>
+    <div class="farr">→</div>
+    <div class="fbox"><b>📤 输出(数百对)</b><small>写入 <code class="inl">datasets/{产品}/assets/{缺陷类型}/synth/</code>:<br>形态各异、光影逼真、带像素级精准掩码的<br><code class="inl">{名}.png</code> + <code class="inl">{名}_mask.png</code></small></div>
+  </div>
+  <p class="fnote">输出的素材对 <code class="inl">train</code> 仓库<b>零修改无缝调用</b>——train 完全不用改一行代码,就像人工抠的素材一样用。</p>
+
+  <h3>三个仓库如何联手(总流水线)</h3>
+  <p>synth_assets 是三兄弟里的老二。原文用一张流程图讲清了三仓分工,翻译成大白话:</p>
+
+  <figure class="fig">
+    <svg viewBox="0 0 940 300" role="img" aria-label="define_masks、synth_assets、train 三个仓库围绕 datasets 数据目录协作的流程图">
+      <defs>
+        <marker id="ah1" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+          <path d="M0,0 L8,4.5 L0,9 Z" fill="#64748b"/>
+        </marker>
+      </defs>
+      <rect x="15" y="40" width="400" height="230" rx="14" fill="#f0ede3" stroke="#d8d2c0" stroke-width="1.5"/>
+      <text x="35" y="66" class="tb" font-size="14">datasets/{产品}/ · 数据大本营</text>
+
+      <rect x="40" y="84" width="165" height="86" rx="10" fill="#ffffff" stroke="#b9c8ea" stroke-width="2"/>
+      <text x="122" y="108" text-anchor="middle" class="tb">{点位}/</text>
+      <text x="122" y="128" text-anchor="middle" class="t">*.bmp 原图</text>
+      <text x="122" y="146" text-anchor="middle" class="t">*.bmp.tmp 多边形标注</text>
+      <text x="122" y="162" text-anchor="middle" class="t">{基准图名}.json 分区定义</text>
+
+      <rect x="225" y="84" width="165" height="86" rx="10" fill="#ffffff" stroke="#e7b58a" stroke-width="2"/>
+      <text x="307" y="108" text-anchor="middle" class="tb">assets/{缺陷类型}/synth/</text>
+      <text x="307" y="128" text-anchor="middle" class="t">{名}.png 缺陷小图</text>
+      <text x="307" y="146" text-anchor="middle" class="t">{名}_mask.png 掩码</text>
+      <text x="307" y="164" text-anchor="middle" class="tm">synth_assets 的最终产出</text>
+
+      <rect x="555" y="20" width="180" height="64" rx="12" fill="#eaf2fe" stroke="#93b4f5" stroke-width="2"/>
+      <text x="645" y="44" text-anchor="middle" class="tb">仓库① define_masks</text>
+      <text x="645" y="63" text-anchor="middle" class="t">画分区与对齐基准</text>
+
+      <rect x="555" y="118" width="180" height="64" rx="12" fill="#fdf0e7" stroke="#e7b58a" stroke-width="2"/>
+      <text x="645" y="142" text-anchor="middle" class="tb">仓库② synth_assets</text>
+      <text x="645" y="161" text-anchor="middle" class="t">缺陷资产训练与裂变合成</text>
+
+      <rect x="555" y="216" width="180" height="64" rx="12" fill="#e9f6ee" stroke="#86d3a1" stroke-width="2"/>
+      <text x="645" y="240" text-anchor="middle" class="tb">仓库③ train</text>
+      <text x="645" y="259" text-anchor="middle" class="t">在线泊松贴图与分割训练</text>
+
+      <path d="M575,52 C460,52 460,110 415,112" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
+      <text x="470" y="40" class="tm">产出分区定义与标注</text>
+
+      <path d="M415,150 L551,150" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
+      <text x="448" y="140" class="tm">读点位数据</text>
+
+      <path d="M645,186 L645,212" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
+      <text x="658" y="203" class="tm">合成素材供 train 零修改调用</text>
+
+      <path d="M555,258 C480,258 480,190 415,178" fill="none" stroke="#64748b" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#ah1)"/>
+      <text x="438" y="278" class="tm">点位原图也直接进 train(虚线)</text>
+    </svg>
+    <figcaption>三仓协作:① define_masks 画分区 → 数据落进点位目录;② synth_assets 读点位数据做训练与裂变,产出写进 assets/synth/;③ train 同时吃点位原图(虚线)与 synth 素材,在线泊松贴图训练分割模型。</figcaption>
+  </figure>
+
+  <div class="tscroll">
+  <table class="tbl">
+    <tr><th>仓库</th><th>角色(原文原话)</th><th>大白话</th></tr>
+    <tr><td><b>define_masks</b>(仓库①)</td><td>基准图分区定义与对齐实验</td><td>人工在基准大图上画检测分区、做对齐,产出 <code class="inl">{基准图名}.json</code> 和 <code class="inl">.bmp.tmp</code> 标注。</td></tr>
+    <tr><td><b>synth_assets</b>(仓库②)</td><td>缺陷数字资产合成流水线</td><td>本文档主角:训练 LoRA + 裂变合成,量产 <code class="inl">{名}.png + {名}_mask.png</code> 素材对。</td></tr>
+    <tr><td><b>train</b>(仓库③)</td><td>多点位缺陷分割训练</td><td>拿素材去"喂"分割模型:训练时在线把缺陷泊松贴到原图随机位置,教模型指出缺陷在哪。</td></tr>
+  </table>
+  </div>
+</section>
+
+<!-- ================= 第 3 章 ================= -->
+<section id="dirs">
+  <div class="chap"><span class="chapno">第 3 章</span><h2>文件都放在哪?目录结构与格式规范</h2></div>
+  <div class="chapref">对应原文 §二「目录结构与文件格式规范」</div>
+
+  <h3>一条铁律:人写的配置用 .jsonc,机器写的产物用 .json</h3>
+  <p>三个仓库统一遵守这条规则,一看后缀名就知道这文件"谁负责维护":</p>
+  <div class="tscroll">
+  <table class="tbl">
+    <tr><th>文件类型</th><th>扩展名</th><th>规则说明</th><th>典型文件</th></tr>
+    <tr>
+      <td><b>人工维护的配置</b></td><td><code class="inl">.jsonc</code></td>
+      <td>允许编写 <code class="inl">//</code> 与 <code class="inl">/* */</code> 注释,方便研发与现场人员维护说明</td>
+      <td><code class="inl">config/app_config.jsonc</code><br><code class="inl">datasets/{产品}/{点位}/assets.jsonc</code></td>
+    </tr>
+    <tr>
+      <td><b>代码生成的产物</b></td><td><code class="inl">.json</code></td>
+      <td>标准纯 JSON(无注释),所有字段含义统一在仓库 <code class="inl">README.md</code> 中说明</td>
+      <td><code class="inl">{基准图名}.json</code>(define_masks 产出)<br><code class="inl">models/.../manifest.json</code>(synth_assets / train 产出)</td>
+    </tr>
+  </table>
+  </div>
+  <div class="co plain">
+    <span class="tag">💡 大白话</span>
+    <p>给人看的本子(<b>.jsonc</b>)可以随手写备注:"这行是干嘛的、现场别乱改";机器写的日志(<b>.json</b>)不需要注释,它的"说明书"统一放在仓库 README 里,查一处就够。</p>
+  </div>
+
+  <h3>第二条铁律:正式产物进 models/,过程草稿进 .tmp/</h3>
+  <p>这套产物管理逻辑与 train 仓库<b>完全一致</b>,新手只要记住"档案柜 vs 草稿纸"的比喻:</p>
+  <div class="duo">
+    <div class="card">
+      <h4>🗄️ models/{产品}/{缺陷类型}/ —— 正式档案柜</h4>
+      <ul style="margin:6px 0;font-size:14.5px">
+        <li><b>只在 Step 2 LoRA 训练成功结束的那一刻</b>统一生成,平时绝对干净;</li>
+        <li>存放训练好的 <b>LoRA 权重</b>、<b>形态模板库</b>(<code class="inl">templates/</code>)与 <code class="inl">manifest.json</code>——都是正式可复用资产;</li>
+        <li>以后想补造新一批素材?<b>无需重新训练</b>,直接加载档案柜里的权重,秒级生图。</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>🗑️ .tmp/{产品}/{缺陷类型}/ —— 草稿纸篓</h4>
+      <ul style="margin:6px 0;font-size:14.5px">
+        <li>切图缓存、训练成功前的<b>候选</b>形状模板(<code class="inl">1_crops/templates/</code>)、重绘过程图、验收预览图……<b>一切中间过程文件</b>都丢这儿;</li>
+        <li>随时可整目录一键删除,删了也能重跑出来;</li>
+        <li>绝不污染源码、<code class="inl">models/</code> 和 <code class="inl">datasets/</code>。</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>全工程目录布局(原文完整目录树)</h3>
+  <p>整棵树原样搬来,<span class="k" style="color:#1d4ed8;font-weight:600">蓝色</span>=文件夹、<span style="color:#b45309;font-weight:600">橙色</span>=注释说明、<span style="color:#15803d;font-weight:600">绿色</span>=关键标记:</p>
+  <pre class="tree"><span class="d">supervised_apps/</span>
+ <span class="d">├─ datasets/</span>                                  <span class="a"># 【产品素材库 · 不进 GitLab】</span>
+ │   <span class="d">└─ {产品}/</span>                                <span class="a"># 例如 HT12/ (一产品一闭环目录)</span>
+ │       <span class="d">├─ assets/</span>                            <span class="a"># 该产品专属缺陷素材库</span>
+ │       │   <span class="d">├─ 砂眼/</span>
+ │       │   │   <span class="d">├─</span> <span class="f">*.png + *_mask.png</span>         <span class="a">#   人工收集的原始素材</span>
+ │       │   │   <span class="d">└─ synth/</span>                     <span class="k">#   【synth_assets 最终产出】AI 合成素材配对</span>
+ │       │   <span class="d">└─ 划痕/</span>
+ │       │       <span class="d">├─</span> <span class="f">*.png + *_mask.png</span>
+ │       │       <span class="d">└─ synth/</span>
+ │       <span class="d">└─ {点位}/</span>                            <span class="a"># 例如 JXFB-1-P1/、JXFB-1-P5/</span>
+ │           <span class="d">├─</span> <span class="f">{基准图名}.json</span>                <span class="a">#   define_masks 产出的分区定义 (标准 JSON)</span>
+ │           <span class="d">├─</span> <span class="f">assets.jsonc</span>                   <span class="a">#   分区 × 资产绑定 (人工维护 JSONC, dir="../assets/...")</span>
+ │           <span class="d">└─</span> <span class="f">*.bmp (+ *.bmp.tmp)</span>            <span class="a">#   原图与多边形标注 (label="砂眼"/"划痕"/"排除")</span>
+ │
+ <span class="d">├─ define_masks/</span>                              <span class="a"># 【仓库 1:基准图分区定义与对齐实验】</span>
+ <span class="d">├─ train/</span>                                     <span class="a"># 【仓库 3:多点位缺陷分割训练】</span>
+ │
+ <span class="d">└─ synth_assets/</span>                              <span class="a"># 【仓库 2:缺陷数字资产合成流水线】</span>
+     <span class="d">├─ config/</span>
+     │   <span class="d">└──</span> <span class="f">app_config.jsonc</span>                  <span class="a"># 全局配置 (人工维护 · JSONC)</span>
+     <span class="d">├─ src/synth_assets/</span>                      <span class="a"># 纯源码目录</span>
+     │   <span class="d">├──</span> <span class="f">step1_prep.py</span>                     <span class="a"># 阶段 1:512 切片 + 轮廓外扩三区掩码 + 提取形状模板至 .tmp</span>
+     │   <span class="d">├──</span> <span class="f">step2_lora.py</span>                     <span class="a"># 阶段 2:FLUX.1-Fill 软权重 LoRA 训练 + 成功后统一晋升至 models/</span>
+     │   <span class="d">├──</span> <span class="f">step3_inpaint.py</span>                  <span class="a"># 阶段 3:模板弹性变形 + 局部重绘生成</span>
+     │   <span class="d">├──</span> <span class="f">step4_extract.py</span>                  <span class="a"># 阶段 4:前后差分自动抠图 + 质量门控 + 小图导出</span>
+     │   <span class="d">└──</span> <span class="f">main.py</span>                           <span class="a"># CLI 统一编排入口</span>
+     │
+     <span class="d">├─ models/{产品}/{缺陷类型}/</span>               <span class="a"># 【正式模型资产 · 仅在 Step 2 训练成功结束时写入】</span>
+     │   <span class="d">├──</span> <span class="f">lora_weights.safetensors</span>          <span class="a"># 训练好的缺陷专属 FLUX LoRA 权重</span>
+     │   <span class="d">├──</span> <span class="f">manifest.json</span>                     <span class="a"># 资产元数据 (代码生成 · 标准 JSON)</span>
+     │   <span class="d">└── templates/</span>                        <span class="a"># 随 LoRA 训练成功一并转正的真实缺陷二值形态模板 (*.png)</span>
+     │
+     <span class="d">└─ .tmp/{产品}/{缺陷类型}/</span>                 <span class="a"># 【中间过程缓存 · gitignore · 随时可一键删除】</span>
+         <span class="d">├── 1_crops/</span>                          <span class="a"># 512×512 训练切片、三区权重掩码、切图预览拼图</span>
+         │   <span class="d">└── templates/</span>                    <span class="a"># Step 1 提取的候选真实缺陷二值形态模板 (训练成功前暂存于此)</span>
+         <span class="d">├── 2_inpaint/</span>                        <span class="a"># 512×512 重绘前干净底图与重绘后对比缓存</span>
+         <span class="d">├── 3_preview/</span>                        <span class="a"># 差分抠图验收拼图 (原底图 | 生成图 | 差分热力 | 最终掩码)</span>
+         <span class="d">└── logs/</span>                             <span class="a"># 运行日志</span></pre>
+
+  <h3>逐块拆解这棵树</h3>
+  <ul>
+    <li><b>datasets/{产品}/</b>——"一产品一闭环":产品 HT12 的素材、点位图、产出全在这一个目录里搞定。<b>不进 GitLab</b>(图片体积大且涉及产品隐私,不传代码仓库)。
+      <ul>
+        <li><b>assets/砂眼(或划痕)/</b>:先有人工收集的原始素材 <code class="inl">*.png + *_mask.png</code>;旁边建 <code class="inl">synth/</code> 子目录,专门装 synth_assets 量产的 AI 合成素材对——<b>这就是全流水线的最终产出位置</b>。</li>
+        <li><b>{点位}/</b>:每个相机工位一个目录,里面三样东西——分区定义 json、人工维护的 assets.jsonc(写清"哪个分区绑定用哪类素材文件夹",通过 <code class="inl">dir="../assets/..."</code> 指过去)、原图 .bmp 与标注 .bmp.tmp(标注带「砂眼」「划痕」「排除」三种 label)。</li>
+      </ul>
+    </li>
+    <li><b>synth_assets/src/synth_assets/</b>:纯源码目录,四个步骤各一个文件,<code class="inl">main.py</code> 是 CLI 统一编排入口(黑窗口敲一条命令,它负责按顺序调度四步)。</li>
+    <li><b>models/ 与 .tmp/ 的四个子目录</b>:1_crops(切片+权重掩码+预览拼图+候选模板)、2_inpaint(重绘前后缓存)、3_preview(验收拼图四联:原底图|生成图|差分热力|最终掩码)、logs(运行日志)。</li>
+  </ul>
+
+  <div class="co warn">
+    <span class="tag">⚠️ 注意</span>
+    <p>同一份"真实缺陷轮廓模板",<b>训练成功前</b>住在 <code class="inl">.tmp/.../1_crops/templates/</code>(候选身份),<b>训练成功的那一刻</b>随 LoRA 权重一起"转正"搬进 <code class="inl">models/.../templates/</code>。两个同名目录,身份天差地别。</p>
+  </div>
+</section>
+
+<!-- ================= 第 4 章 ================= -->
+<section id="pipeline">
+  <div class="chap"><span class="chapno">第 4 章</span><h2>四步流水线总览:一条命令的旅行</h2></div>
+  <div class="chapref">对应原文 §三「全流程事件线树」</div>
+
+  <p>在黑窗口敲下 <code class="inl">uv run synth --product HT12</code>,程序就会自动走完下面四步(细节在后面第 5~8 章逐个拆讲):</p>
+
+  <div class="steps">
+    <div class="stp">
+      <h4>样本切片与掩码准备 <code class="inl" style="font-size:13px">step1_prep.py</code></h4>
+      <ul>
+        <li>扫描各点位的 <code class="inl">.bmp.tmp</code> 标注,按缺陷名归类(「砂眼」「划痕」,跳过「排除」);</li>
+        <li>轮廓外扩 <span class="kn">8px</span> 作过渡缓冲带,生成三区权重图(<span class="kn">1.0</span> / <span class="kn">1.0→0.4</span> / <span class="kn">0.0</span>);</li>
+        <li>以缺陷为中心裁 <span class="kn">512×512</span> 切块(带轻微随机偏移);</li>
+        <li>切片、权重图、候选模板全部先写入 <code class="inl">.tmp/HT12/{缺陷类型}/1_crops/</code>(此时不写 models/)。</li>
+      </ul>
+    </div>
+    <div class="stp">
+      <h4>缺陷资产 LoRA 训练 <code class="inl" style="font-size:13px">step2_lora.py</code><span class="svr">🖥️ 在双 A40 服务器执行</span></h4>
+      <ul>
+        <li>加载 FLUX.1-Fill-dev(bfloat16 原生精度)和 Step 1 的 512 图块 + 三区权重掩码;</li>
+        <li>掩码加权损失:只在核心区与缓冲带上算误差,框外背景不计入;</li>
+        <li>训练成功结束时<b>原子化交付</b>:权重 + 模板 + manifest 一并写入 <code class="inl">models/HT12/{缺陷类型}/</code>。</li>
+      </ul>
+    </div>
+    <div class="stp">
+      <h4>掩码裂变与局部重绘 <code class="inl" style="font-size:13px">step3_inpaint.py</code><span class="svr">🖥️ 在双 A40 服务器执行</span></h4>
+      <ul>
+        <li>在合法检测分区内随机裁干净金属块 P_clean;</li>
+        <li>真实模板经旋转/翻转/缩放/弹性变形后外扩 8px 得粗框 M_local;</li>
+        <li>挂载该缺陷 LoRA,在粗框内画出新缺陷;</li>
+        <li>边缘 <span class="kn">4px</span> 余弦羽化融合,框外像素 100% 保持原样,得 P_final。</li>
+      </ul>
+    </div>
+    <div class="stp">
+      <h4>前后差分自动抠图与导出 <code class="inl" style="font-size:13px">step4_extract.py</code></h4>
+      <ul>
+        <li>前后相减 <span class="kn">|P_final − P_clean|</span>,补成正常金属处差值≈0、真缺陷处差值极大;</li>
+        <li>按底噪倍数双阈值卡线:<span class="kn">3.5σ</span> 定核心、<span class="kn">1.8σ</span> 吸边缘,得精准掩码 M_GT;</li>
+        <li>质量门控:面积过小或峰值信噪比 &lt; <span class="kn">3.5</span> 判废片,自动丢弃重画;</li>
+        <li>按 M_GT 外接框(<span class="kn">+8px</span> 边距)裁小图,落盘 <code class="inl">assets/{缺陷类型}/synth/{序号}.png + _mask.png</code>。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="co plain">
+    <span class="tag">💡 大白话</span>
+    <p>四步连起来就是:<b>切好菜(Step 1)→ 教会徒弟(Step 2)→ 徒弟炒菜(Step 3)→ 自动验货装盘(Step 4)</b>。前两步每个缺陷类型只需做一次(教会了就存档),后两步想产多少产多少。</p>
+  </div>
+</section>
+
+<!-- ================= 第 5 章 ================= -->
+<section id="step1">
+  <div class="chap"><span class="chapno">第 5 章</span><h2>Step 1 详解:样本切片与掩码准备</h2></div>
+  <div class="chapref">对应原文 §三 Step 1 + §四.1 前两行(外扩 8px / 固定 512 切片)</div>
+
+  <h3>5.1 先分清:系统里有三种图,Step 1 切的是哪种?</h3>
+  <p>新手最容易在这里犯迷糊:<b>Step 1 切的不是人工抠的缺陷小图,人工抠的小图也不是 512</b>。整个系统里其实同时存在三种图,各干各的活:</p>
+  <div class="tscroll">
+  <table class="tbl">
+    <tr><th>图的种类</th><th>从哪来</th><th>尺寸</th><th>给谁用</th></tr>
+    <tr><td><b>点位原图</b> <code class="inl">*.bmp</code></td><td>工业相机拍的整幅大图</td><td>很大(几千像素见方)</td><td>原始素材来源</td></tr>
+    <tr><td><b>512 训练切片</b></td><td>Step 1 从点位原图上裁的</td><td>固定 <span class="kn">512×512</span></td><td>喂给 Step 2 训练 LoRA</td></tr>
+    <tr><td><b>素材小图</b>(人工抠的 <code class="inl">*.png</code>、synth 产出的 <code class="inl">synth/*.png</code>)</td><td>人工抠取 / Step 4 紧包裁剪</td><td>不定的小尺寸(缺陷多大图就多大,四周留 <span class="kn">8px</span>)</td><td>给 train 仓库泊松贴图用</td></tr>
+  </table>
+  </div>
+  <ul>
+    <li>人工抠的缺陷小图是<b>紧包着缺陷裁的小块</b>,尺寸不固定、通常远小于 512——它们是给 train 当"贴图素材"用的,<b>从头到尾不进 synth_assets 的流水线</b>;</li>
+    <li>Step 1 干的是另一件事:回到<b>点位原图</b>(那幅大图)上,找到 <code class="inl">.bmp.tmp</code> 里标注的缺陷位置,以缺陷为中心从大图上裁出 512×512 切块,连同三区权重图送去训练 LoRA。</li>
+  </ul>
+  <div class="co why">
+    <span class="tag">🎯 为什么教 LoRA 非得是 512?</span>
+    <p>① <b>AI 画师只在固定尺寸的画布上干活</b>:FLUX.1-Fill 这类模型要求输入固定分辨率的图块,512 就是它的工作分辨率,训练(Step 2)和生图(Step 3)都必须是这个尺寸;② <b>AI 需要"周边环境"才能学会衔接</b>:512 切块里缺陷只占中间一小块,四周全是正常金属——正因为带着这些背景(不算分但提供上下文),LoRA 才能学到"缺陷边缘怎么和金属过渡";③ 再加上两条工程理由:1:1 原生像素不缩放保锐度、尺寸统一不分桶不浪费显存(详见 5.5)。</p>
+  </div>
+  <div class="co plain">
+    <span class="tag">💡 大白话:闭环的对称性</span>
+    <p><b>进去教 AI 的是 512 大块,最后产出来的仍是紧包小图</b>(Step 4 按外接框 +8px 裁回去)——因为 train 要的还是和人工小图同格式的贴图素材。512 只是 AI 的"工作画布"尺寸,不是素材尺寸。</p>
+  </div>
+
+  <h3>5.2 扫描归类:先清点家底</h3>
+  <p>程序扫描 <code class="inl">datasets/HT12/{各点位}/*.bmp.tmp</code>,把标注按<b>具体缺陷名</b>归类——「砂眼」归砂眼堆、「划痕」归划痕堆,label 为<b>「排除」的直接跳过</b>(那些多边形是人工特意画了说"这块别管"的,比如反光的亮斑)。</p>
+
+  <h3>5.3 轮廓外扩 8px:给 AI 留"过渡缓冲带"</h3>
+  <p>把每个缺陷多边形<b>顺着轮廓</b>向四周形态学膨胀 <span class="kn">8px</span>(想象给图形均匀吹胖一圈),形成"内部核心区 + 8px 缓冲环带"的结构。</p>
+  <div class="co why">
+    <span class="tag">🎯 为什么是 8px?为什么顺着轮廓扩?</span>
+    <p>人工标注通常<u>贴着</u>缺陷边缘(顶多带几像素背景)。如果只让 AI 在原框里画画,AI 没有空间画缺陷边缘的<b>立体暗影、毛刺、明暗过渡</b>——画出来像一张"剪纸",死板、假。</p>
+    <p>顺着轮廓外扩 8px 就是给 AI 留出过渡带。关键在"<b>顺着轮廓</b>"四个字:因为是沿着形状扩(而不是扩成矩形框),一条细长划痕也只是<b>两侧各加宽 8px</b>,不会框进一大片无关背景。</p>
+  </div>
+
+  <h3>5.4 生成三区权重图:一张"批改重点范围表"</h3>
+  <p>在 512 切片上,每个像素被赋予一个 0~1 的训练权重,分成三个区:</p>
+  <div class="tscroll">
+  <table class="tbl">
+    <tr><th>区域</th><th>范围</th><th>权重</th><th>含义</th></tr>
+    <tr><td>多边形内 · 核心区</td><td>人工标注多边形内部</td><td><span class="kn">1.0</span></td><td>必须一比一学像</td></tr>
+    <tr><td>外扩 8px · 缓冲带</td><td>多边形外圈 8px 环带</td><td><span class="kn">1.0 → 0.4</span> 渐变</td><td>越靠近缺陷越重要,向外逐渐放松</td></tr>
+    <tr><td>缓冲带外 · 背景区</td><td>其余全部</td><td><span class="kn">0.0</span></td><td>完全不管,学不像也不扣分</td></tr>
+  </table>
+  </div>
+
+  <figure class="fig">
+    <svg viewBox="0 0 660 400" role="img" aria-label="三区权重示意图:上图为平面分区,下图为横切权重剖面曲线">
+      <defs>
+        <radialGradient id="ringG1" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="55%" stop-color="#f59e0b" stop-opacity="0.62"/>
+          <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.16"/>
+        </radialGradient>
+      </defs>
+      <rect x="20" y="16" width="300" height="188" rx="6" class="metal"/>
+      <path d="M30,40 h280 M30,80 h280 M30,120 h280 M30,160 h280 M60,24 v180 M120,24 v180 M240,24 v180" class="metalln" opacity=".5"/>
+      <path d="M170,58 C202,52 228,70 232,96 C237,124 219,146 196,157 C171,169 140,168 120,153 C98,137 90,112 100,90 C109,70 138,62 170,58 Z" fill="url(#ringG1)"/>
+      <path d="M170,70 C194,66 214,80 217,100 C220,122 206,138 188,147 C168,156 144,155 128,143 C112,131 106,112 113,95 C119,80 146,73 170,70 Z" class="defect"/>
+      <path d="M170,70 C194,66 214,80 217,100 C220,122 206,138 188,147 C168,156 144,155 128,143 C112,131 106,112 113,95 C119,80 146,73 170,70 Z" class="dasho"/>
+      <line x1="240" y1="128" x2="345" y2="80" class="lead"/>
+      <text x="350" y="78" class="tb">① 多边形内 · 核心区</text>
+      <text x="350" y="95" class="t">权重 = 1.0(必须学像)</text>
+      <line x1="235" y1="152" x2="345" y2="140" class="lead"/>
+      <text x="350" y="138" class="tb">② 外扩 8px · 缓冲带</text>
+      <text x="350" y="155" class="t">权重 1.0 → 0.4 渐变</text>
+      <line x1="70" y1="40" x2="345" y2="192" class="lead"/>
+      <text x="350" y="190" class="tb">③ 缓冲带外 · 背景区</text>
+      <text x="350" y="207" class="t">权重 = 0.0(不管)</text>
+      <text x="150" y="182" class="tm">虚线 = 人工标注原轮廓</text>
+
+      <text x="20" y="238" class="tb" font-size="14">横切一刀,看权重剖面(穿过多边形中心画一条线):</text>
+      <line x1="55" y1="380" x2="410" y2="380" stroke="#9aa2b1" stroke-width="1.5"/>
+      <line x1="55" y1="268" x2="55" y2="380" stroke="#9aa2b1" stroke-width="1.5"/>
+      <line x1="55" y1="292" x2="410" y2="292" stroke="#c8c2b2" stroke-dasharray="4 4"/>
+      <line x1="55" y1="268" x2="410" y2="268" stroke="#c8c2b2" stroke-dasharray="4 4"/>
+      <text x="418" y="296" class="t">0.4</text>
+      <text x="418" y="272" class="t">1.0</text>
+      <text x="418" y="384" class="t">0.0</text>
+      <path d="M60,380 L140,380 L185,292 L230,268 L330,268 L375,292 L420,380" fill="none" stroke="#2563eb" stroke-width="2.5"/>
+      <rect x="185" y="268" width="190" height="112" fill="#f59e0b" opacity="0.10"/>
+      <rect x="230" y="268" width="100" height="112" fill="#b45309" opacity="0.13"/>
+      <text x="268" y="264" text-anchor="middle" class="tm">核心区 1.0</text>
+      <text x="188" y="264" text-anchor="middle" class="tm">缓冲带</text>
+      <text x="376" y="264" text-anchor="middle" class="tm">缓冲带</text>
+      <text x="100" y="372" class="tm">背景 0</text>
+      <text x="452" y="372" class="tm">背景 0</text>
+      <text x="470" y="330" class="t">↔ 越过缺陷的一条线</text>
+      <line x1="140" y1="380" x2="140" y2="322" stroke="#8a8477" stroke-dasharray="3 3"/>
+      <line x1="230" y1="380" x2="230" y2="322" stroke="#8a8477" stroke-dasharray="3 3"/>
+      <text x="185" y="316" text-anchor="middle" class="tm">带宽 = 8px</text>
+    </svg>
+    <figcaption>三区权重图:上图——缺陷(棕色实心)紧贴人工标注虚线,外圈橙色渐变环即外扩 8px 缓冲带;下图——横切剖面上权重从背景 0 跳到 0.4、升到核心 1.0、再对称落回 0。</figcaption>
+  </figure>
+
+  <div class="co plain">
+    <span class="tag">💡 大白话</span>
+    <p>三区权重就是老师批作业时拿红笔圈的范围:<b>圈内(1.0)必须批,圈边(0.4~1.0)顺手批轻点,圈外(0)压根不看</b>。这样 AI 不会被"背景长啥样"分走任何注意力。</p>
+  </div>
+
+  <h3>5.5 固定 512×512 切块:以缺陷为中心裁训练图</h3>
+  <p>所有训练与重绘统一按 <span class="kn">512×512</span>、<b>1:1 原生像素、不缩放</b>裁剪;切块以缺陷为中心,但带<b>轻微随机偏移</b>——为了避开同图上的其他缺陷,别把两个缺陷裁进同一块。</p>
+
+  <figure class="fig">
+    <svg viewBox="0 0 660 350" role="img" aria-label="512×512 切块示意图:大图上两个缺陷,蓝色虚线方块只框住其中一个">
+      <rect x="25" y="20" width="450" height="310" rx="6" class="metal"/>
+      <path d="M35,60 h430 M35,110 h430 M35,260 h430 M35,305 h430 M90,30 v290 M330,30 v290" class="metalln" opacity=".5"/>
+      <circle cx="70" cy="40" r="1.6" fill="#b8b4a8"/><circle cx="440" cy="200" r="1.6" fill="#b8b4a8"/><circle cx="210" cy="320" r="1.6" fill="#b8b4a8"/><circle cx="380" cy="55" r="1.6" fill="#b8b4a8"/>
+      <path d="M175,175 C192,170 208,180 210,196 C212,214 198,227 181,228 C163,229 150,217 151,201 C152,187 162,178 175,175 Z" class="defect"/>
+      <path d="M175,182 C186,179 196,186 197,196 C198,208 190,215 180,216 C170,217 162,210 163,200 C164,192 169,184 175,182 Z" class="defectd"/>
+      <text x="148" y="252" class="tm">缺陷 A</text>
+      <path d="M400,80 C408,77 416,82 416,90 C416,99 408,103 400,102 C392,101 388,94 391,88 C393,84 396,82 400,80 Z" class="defect"/>
+      <text x="378" y="122" class="tm">缺陷 B</text>
+      <rect x="65" y="95" width="200" height="200" class="dashb"/>
+      <text x="165" y="88" text-anchor="middle" class="tb" fill="#1e40af">512 × 512 训练切块</text>
+      <line x1="265" y1="295" x2="300" y2="330" stroke="#8a8477"/>
+      <text x="303" y="342" class="tm" fill="#8a8477">切块中心相对缺陷 A 略有偏移</text>
+      <path d="M420,100 C450,140 440,190 415,215" fill="none" stroke="#dc2626" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ah1)"/>
+      <text x="428" y="235" class="tm" fill="#dc2626">同图其他缺陷 →</text>
+      <text x="428" y="251" class="tm" fill="#dc2626">靠随机偏移避开</text>
+      <rect x="500" y="95" width="140" height="200" rx="8" fill="#eaf2fe" stroke="#cddbfc"/>
+      <text x="570" y="125" text-anchor="middle" class="tb">原生 1:1 裁剪</text>
+      <text x="570" y="150" text-anchor="middle" class="t">不放大、不缩小</text>
+      <text x="570" y="185" text-anchor="middle" class="tb">尺寸统一</text>
+      <text x="570" y="210" text-anchor="middle" class="t">所有图块同尺寸</text>
+      <text x="570" y="245" text-anchor="middle" class="tb">与 train 一致</text>
+      <text x="570" y="270" text-anchor="middle" class="t">下游也是 512</text>
+    </svg>
+    <figcaption>切块示意:蓝色虚线方块 = 512×512 训练切块,框住缺陷 A 并故意偏移一点,让缺陷 B 留在框外。</figcaption>
+  </figure>
+
+  <div class="co why">
+    <span class="tag">🎯 为什么死守 512×512 不放?</span>
+    <p>原文给了三条硬理由:</p>
+    <ol>
+      <li><b>保锐度</b>:1:1 保持工业相机原生像素,细微缺陷(细划痕、小砂眼)不因缩放而糊掉;</li>
+      <li><b>保显存</b>:尺寸统一就不用"多尺寸分桶",训练批次能对齐,显存不被碎片化浪费;</li>
+      <li><b>保对齐</b>:与下游 train 仓库的切块尺度(512)<b>完全一致</b>,无缝衔接。</li>
+    </ol>
+  </div>
+
+  <h3>5.6 Step 1 的产物去哪?</h3>
+  <p>训练切片、三区权重图、候选二值轮廓模板(<code class="inl">templates/</code>)、切图预览拼图——<b>全部写入 <code class="inl">.tmp/HT12/{缺陷类型}/1_crops/</code></b>,此时一个字节都不写 <code class="inl">models/</code>(正式档案柜必须等 Step 2 训练成功才开柜)。</p>
+</section>
+
+<!-- ================= 第 6 章 ================= -->
+<section id="step2">
+  <div class="chap"><span class="chapno">第 6 章</span><h2>Step 2 详解:缺陷资产 LoRA 训练</h2></div>
+  <div class="chapref">对应原文 §三 Step 2 + §四.1 第三行(三区软权重损失 / 成功后统一转正)</div>
+
+  <div class="co warn">
+    <span class="tag">⚠️ 在哪跑?</span>
+    <p>这一步和 Step 3 都标注了<b>「在双 A40 服务器执行」</b>——训练大模型要吃大量显存,开发笔记本带不动,得靠装了两块 A40 专业显卡的服务器。</p>
+  </div>
+
+  <h3>6.1 登场的三位主角:画师、笔记、暗号</h3>
+  <p>讲"训练"之前,先把这一步登场的三个角色认熟。一句话记住它们的关系:<b>FLUX 是画师,LoRA 是外挂在他身上的专项笔记,触发词是点名暗号</b>。</p>
+  <ul>
+    <li><b>FLUX.1-Fill-dev(画师本体)</b>:专业 AI 修图大模型,以 <b>bfloat16 原生精度</b>加载(省一半显存、算得快,这也是它原生使用的精度);</li>
+    <li><b>LoRA(专项笔记)</b>:不动画师本体,只在旁边外挂一小块"砂眼画法"记忆;一类缺陷配一本笔记,<span class="kn">lora_rank 32</span> = 笔记的容量;</li>
+    <li><b>触发词(点名暗号)</b>:比如 <code class="inl">[DEF_HT12_砂眼]</code>——生图时在提示里喊它,笔记才被激活、画师才按笔记画。</li>
+  </ul>
+
+  <figure class="fig">
+    <svg viewBox="0 0 680 255" role="img" aria-label="LoRA 外挂结构图:FLUX 大模型冻结不动,LoRA 小补丁外挂训练,触发词负责激活">
+      <rect x="30" y="70" width="260" height="140" rx="14" fill="#eaf2fe" stroke="#93b4f5" stroke-width="2"/>
+      <text x="160" y="102" text-anchor="middle" class="tb" font-size="14">FLUX.1-Fill-dev(画师本体)</text>
+      <text x="160" y="126" text-anchor="middle" class="t">个头大(以 GB 计)· 几十亿个旋钮</text>
+      <text x="160" y="150" text-anchor="middle" class="t">🔒 训练全程冻结,一个旋钮都不拧</text>
+      <text x="160" y="184" text-anchor="middle" class="tm">会画万物,但没见过你家产品的砂眼</text>
+
+      <rect x="400" y="16" width="250" height="80" rx="12" fill="#fdf0e7" stroke="#e7b58a" stroke-width="2"/>
+      <text x="525" y="42" text-anchor="middle" class="tb">LoRA 专项笔记(砂眼)</text>
+      <text x="525" y="63" text-anchor="middle" class="t">✏️ 只训练这里 · 个头小(以 MB 计)</text>
+      <text x="525" y="83" text-anchor="middle" class="t">容量 = lora_rank 32</text>
+
+      <rect x="400" y="132" width="250" height="80" rx="12" fill="#f3eefe" stroke="#ddd3f8" stroke-width="2"/>
+      <text x="525" y="158" text-anchor="middle" class="tb">[DEF_HT12_砂眼] 点名暗号</text>
+      <text x="525" y="179" text-anchor="middle" class="t">写在提示里,喊到才激活笔记</text>
+      <text x="525" y="199" text-anchor="middle" class="t">一类缺陷配一个暗号</text>
+
+      <path d="M 398,56 C 358,68 328,88 296,106" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
+      <text x="348" y="66" class="tm" text-anchor="middle">外挂挂载</text>
+      <path d="M 525,130 L 525,102" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
+      <text x="562" y="120" class="tm" text-anchor="middle">点名激活</text>
+    </svg>
+    <figcaption>画师本体(FLUX)冻结不动,训练只发生在小小的 LoRA 笔记上;触发词负责"点名"唤醒对应笔记。换一类缺陷 = 再训一本新笔记,几本笔记互不干扰,画师永远通用。</figcaption>
+  </figure>
+
+  <div class="co why">
+    <span class="tag">🎯 为什么只训 LoRA,不动 FLUX 本体?</span>
+    <p>① 手头只有几十张真实样本,拿这么少的数据去硬改几十亿参数的大模型,极易把画师"教坏"(行话叫学崩、把原会的都忘了);② 全参数训练需要海量数据和惊人显存,不现实;③ LoRA 参数少,小数据就能学会专项,还<b>一类缺陷一本、即插即拔</b>——要训划痕就再挂一本"划痕笔记",砂眼笔记毫发无伤。</p>
+  </div>
+
+  <h3>6.2 AI 是怎么"画"出来的:从噪点里一步步"擦"出图</h3>
+  <p>这类 AI(扩散模型)的画法和人类画家正相反:不是从白纸上一笔笔<b>加</b>,而是从一团随机噪点起步,一步步把噪点<b>擦</b>掉——图像像显影液里的照片、像雾里走出来的人,渐渐浮现。</p>
+
+  <figure class="fig">
+    <svg viewBox="0 0 680 215" role="img" aria-label="去噪三格:从随机噪点逐步擦出清晰缺陷图像">
+      <defs>
+        <pattern id="noiseP1" width="16" height="16" patternUnits="userSpaceOnUse">
+          <circle cx="3" cy="4" r="1.4" fill="#8b8b8b"/>
+          <circle cx="11" cy="2" r="1.1" fill="#6f6f6f"/>
+          <circle cx="7" cy="10" r="1.2" fill="#a0a0a0"/>
+          <circle cx="14" cy="12" r="1" fill="#7d7d7d"/>
+          <circle cx="2" cy="13" r="1" fill="#949494"/>
+        </pattern>
+      </defs>
+      <text x="120" y="26" text-anchor="middle" class="tb">① 起点:一团随机噪点</text>
+      <rect x="40" y="35" width="160" height="125" rx="6" fill="#c9c6bf"/>
+      <rect x="40" y="35" width="160" height="125" rx="6" fill="url(#noiseP1)"/>
+      <text x="120" y="182" text-anchor="middle" class="tm">什么都不是,纯随机</text>
+
+      <path d="M 208,97 L 252,97" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
+      <text x="230" y="88" text-anchor="middle" class="tm">去噪</text>
+
+      <text x="340" y="26" text-anchor="middle" class="tb">② 中间:噪点渐少</text>
+      <rect x="260" y="35" width="160" height="125" rx="6" fill="#c9c6bf"/>
+      <rect x="260" y="35" width="160" height="125" rx="6" fill="url(#noiseP1)" opacity="0.45"/>
+      <path d="M318,72 C334,67 350,76 352,92 C354,110 340,122 323,122 C306,122 296,109 299,93 C301,81 308,74 318,72 Z" class="defect" opacity="0.55"/>
+      <text x="340" y="182" text-anchor="middle" class="tm">形状慢慢显影</text>
+
+      <path d="M 428,97 L 472,97" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
+      <text x="450" y="88" text-anchor="middle" class="tm">去噪</text>
+
+      <text x="560" y="26" text-anchor="middle" class="tb">③ 成品:清晰的缺陷</text>
+      <rect x="480" y="35" width="160" height="125" rx="6" class="metal"/>
+      <path d="M90,60 h140 M90,135 h140" class="metalln" opacity=".5" transform="translate(400,0)"/>
+      <path d="M538,72 C554,67 570,76 572,92 C574,110 560,122 543,122 C526,122 516,109 519,93 C521,81 528,74 538,72 Z" class="defect"/>
+      <path d="M542,82 C550,80 557,86 557,95 C557,104 550,109 542,109 C534,109 530,102 532,94 C534,88 537,84 542,82 Z" class="defectd"/>
+      <text x="560" y="182" text-anchor="middle" class="tm">边缘与四周衔接自然</text>
+    </svg>
+    <figcaption>扩散模型的画法:从随机噪点出发,一步步"擦"出图像(去噪)。Fill 版还额外拿到「原图 + 洞(掩码)」两个信息,只重画洞内、并照着洞外的纹理接茬画。</figcaption>
+  </figure>
+
+  <p>FLUX.1-<b>Fill</b> 版就在这条去噪之路上多了一门绝活:它的输入除了噪点起点,还有<b>一张现成的图 + 一个"洞"(掩码)</b>——它只重画洞里的内容,并且强制与洞四周的纹理、明暗接茬。这和我们的任务严丝合缝:<b>"在一块完好的金属上,补出一个以假乱真的缺陷"</b>。</p>
+
+  <div class="co plain">
+    <span class="tag">💡 大白话</span>
+    <p>Fill 版就像修图软件里的"修补画笔":圈住哪里重画哪里,边缘自动融进周围——只不过它不是复制别处的像素,而是凭笔记"想象"出一个砂眼画上去。</p>
+  </div>
+
+  <h3>6.3 训练 = "画 → 比 → 改"循环一千遍</h3>
+  <p>所谓训练,就是让这位挂着笔记的画师<b>反复应考、反复订正</b>,每轮四拍:</p>
+
+  <figure class="fig">
+    <svg viewBox="0 0 680 300" role="img" aria-label="训练循环图:抽切片、现场画、按三区权重打分、只微调 LoRA 旋钮,循环一千步">
+      <rect x="195" y="12" width="290" height="54" rx="11" fill="#eaf2fe" stroke="#93b4f5" stroke-width="2"/>
+      <text x="340" y="34" text-anchor="middle" class="tb">① 抽一张 512 训练切片</text>
+      <text x="340" y="54" text-anchor="middle" class="t">带缺陷、带三区权重掩码(Step 1 备好)</text>
+
+      <rect x="452" y="102" width="215" height="66" rx="11" fill="#fdf0e7" stroke="#e7b58a" stroke-width="2"/>
+      <text x="559" y="126" text-anchor="middle" class="tb">② 现场画一张</text>
+      <text x="559" y="146" text-anchor="middle" class="t">FLUX + LoRA,提示里带上触发词</text>
+
+      <rect x="195" y="214" width="290" height="66" rx="11" fill="#fdecec" stroke="#f0a5a5" stroke-width="2"/>
+      <text x="340" y="238" text-anchor="middle" class="tb">③ 和真图对比,算损失(打分)</text>
+      <text x="340" y="258" text-anchor="middle" class="t">只算核心 1.0 与缓冲带 0.4~1.0;框外 0 不计</text>
+
+      <rect x="13" y="102" width="200" height="66" rx="11" fill="#e9f6ee" stroke="#86d3a1" stroke-width="2"/>
+      <text x="113" y="126" text-anchor="middle" class="tb">④ 微调 LoRA 旋钮</text>
+      <text x="113" y="146" text-anchor="middle" class="t">哪里画歪修哪里;FLUX 冻结不动</text>
+
+      <path d="M 470,66 C 505,74 532,86 553,100" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
+      <path d="M 546,168 C 526,192 496,204 468,212" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
+      <path d="M 193,247 C 128,242 98,206 98,170" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
+      <path d="M 152,100 C 174,74 182,54 193,44" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
+      <text x="332" y="128" text-anchor="middle" class="tb">一轮 = 画一次、改一次</text>
+      <text x="332" y="150" text-anchor="middle" class="t">循环 1000 步(train_steps)</text>
+      <text x="332" y="170" text-anchor="middle" class="tm">学习率 1e-4 = 每次只拧一丁点旋钮</text>
+    </svg>
+    <figcaption>训练循环:抽切片 → 现场画 → 按三区权重打分 → 只微调 LoRA(FLUX 全程冻结)。一千轮下来,笔记越订越准,画得越来越像。</figcaption>
+  </figure>
+
+  <div class="co plain">
+    <span class="tag">💡 大白话:蒙眼下山</span>
+    <p>训练像<b>蒙眼下山</b>——损失是海拔,旋钮是走路方向。每走一步(画一张、比一次)就感觉脚下是上坡还是下坡(损失变大还是变小),朝下坡方向微调再走。<b>学习率 <span class="kn">1e-4</span></b> = 每步只迈 0.0001 格:步子太大容易一步跨过谷底(学崩),太小又走不到(学不动);<b><span class="kn">1000 步</span></b>(train_steps)= 这座山总共允许走一千步,第 1000 步停下时的旋钮位置,就是最终存档的 LoRA 笔记。</p>
+  </div>
+
+  <h3>6.4 掩码加权损失:只考重点章节</h3>
+  <p>训练时给 AI 的画打分(算损失),但分数要<b>按三区权重加权</b>:</p>
+  <ul>
+    <li>核心区(权重 <span class="kn">1.0</span>)与缓冲带(权重 <span class="kn">0.4~1.0</span>):<b>计入</b>生成误差——画不像就狠狠扣分;</li>
+    <li>外部背景(权重 <span class="kn">0.0</span>):<b>不计入</b>损失——背景画成什么样,一分都不扣。</li>
+  </ul>
+  <div class="co why">
+    <span class="tag">🎯 为什么把框外权重设成 0?</span>
+    <p>逼迫 AI 把 <b>100% 的算力</b>用来学两件事:<b>"这类缺陷长什么样"</b> 和 <b>"缺陷边缘怎么和周围金属衔接过渡"</b>。背景是山是水与它无关,注意力一克都不浪费。</p>
+  </div>
+
+  <h3>6.5 原子化交付:训练成功才开档案柜</h3>
+  <p>训练<b>未成功</b>时,一切产物都以"候选"身份躺在 <code class="inl">.tmp/</code> 草稿区;<b>只有训练成功结束的那一刻</b>,程序才把三样东西一次性整包写入 <code class="inl">models/HT12/{缺陷类型}/</code> 正式档案柜——要么三件齐,要么一件都不出现:</p>
+
+  <figure class="fig">
+    <svg viewBox="0 0 680 272" role="img" aria-label="原子化交付两幕:训练期间档案柜紧锁保持空箱,失败不留半成品;训练成功瞬间三件套一次性整包写入档案柜">
+      <rect x="10" y="14" width="315" height="246" rx="12" fill="#fdecec" opacity=".4" stroke="#f0a5a5" stroke-width="2"/>
+      <text x="167" y="38" text-anchor="middle" class="tb" fill="#b91c1c">场景一 · 训练中 / 未成功</text>
+
+      <rect x="30" y="56" width="140" height="52" rx="10" fill="#f3eefe" stroke="#ddd3f8" stroke-width="2"/>
+      <text x="100" y="77" text-anchor="middle" class="tb">🖥️ Step 2 训练中</text>
+      <text x="100" y="96" text-anchor="middle" class="t">双 A40 服务器</text>
+
+      <path d="M 100,108 L 100,128" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
+      <text x="112" y="124" class="tm">边训边攒草稿</text>
+
+      <rect x="30" y="132" width="140" height="86" rx="10" fill="#fbfaf6" stroke="#d8d2c0" stroke-width="2"/>
+      <text x="100" y="153" text-anchor="middle" class="tb">🗑️ .tmp/ 草稿区</text>
+      <text x="100" y="172" text-anchor="middle" class="t">切片·候选模板·日志</text>
+      <text x="100" y="190" text-anchor="middle" class="tm">随时可整目录删</text>
+
+      <rect x="210" y="100" width="100" height="118" rx="6" fill="#fbfaf6" stroke="#8a8477" stroke-width="2"/>
+      <rect x="222" y="112" width="76" height="20" fill="none" stroke="#c6c2b6"/>
+      <rect x="222" y="138" width="76" height="20" fill="none" stroke="#c6c2b6"/>
+      <text x="260" y="186" text-anchor="middle" font-size="22">🔒</text>
+      <text x="260" y="208" text-anchor="middle" class="tm">柜门紧锁 · 空</text>
+
+      <path d="M 172,168 L 206,168" fill="none" stroke="#dc2626" stroke-width="2" stroke-dasharray="5 4"/>
+      <text x="189" y="160" text-anchor="middle" class="tm" fill="#dc2626">✗</text>
+
+      <text x="167" y="238" text-anchor="middle" class="tm" fill="#b91c1c">❌ 失败 / 中断:models/ 依旧干净</text>
+      <text x="167" y="252" text-anchor="middle" class="tm" fill="#b91c1c">.tmp/ 一键删除重跑就是</text>
+
+      <rect x="340" y="14" width="330" height="246" rx="12" fill="#e9f6ee" opacity=".5" stroke="#86d3a1" stroke-width="2"/>
+      <text x="505" y="38" text-anchor="middle" class="tb" fill="#15803d">场景二 · 训练成功结束的那一刻</text>
+
+      <rect x="356" y="56" width="164" height="44" rx="9" fill="#fdf0e7" stroke="#e7b58a" stroke-width="2"/>
+      <text x="438" y="73" text-anchor="middle" class="tb">📦 LoRA 权重(笔记)</text>
+      <text x="438" y="90" text-anchor="middle" class="tm">lora_weights.safetensors</text>
+
+      <rect x="356" y="106" width="164" height="44" rx="9" fill="#fdf0e7" stroke="#e7b58a" stroke-width="2"/>
+      <text x="438" y="123" text-anchor="middle" class="tb">📦 形态模板库(剪影)</text>
+      <text x="438" y="140" text-anchor="middle" class="tm">templates/</text>
+
+      <rect x="356" y="156" width="164" height="44" rx="9" fill="#fdf0e7" stroke="#e7b58a" stroke-width="2"/>
+      <text x="438" y="173" text-anchor="middle" class="tb">📦 出厂铭牌(档案)</text>
+      <text x="438" y="190" text-anchor="middle" class="tm">manifest.json</text>
+
+      <path d="M 522,122 C 545,122 552,126 562,132" fill="none" stroke="#15803d" stroke-width="2.2" marker-end="url(#ah1)"/>
+
+      <text x="612" y="66" text-anchor="middle" font-size="14">🔓</text>
+      <rect x="566" y="70" width="92" height="130" rx="6" fill="#ffffff" stroke="#15803d" stroke-width="2"/>
+      <rect x="574" y="82" width="76" height="28" rx="4" fill="#e9f6ee" stroke="#86d3a1"/>
+      <text x="612" y="100" text-anchor="middle" class="t">权重</text>
+      <rect x="574" y="114" width="76" height="28" rx="4" fill="#e9f6ee" stroke="#86d3a1"/>
+      <text x="612" y="132" text-anchor="middle" class="t">模板</text>
+      <rect x="574" y="146" width="76" height="28" rx="4" fill="#e9f6ee" stroke="#86d3a1"/>
+      <text x="612" y="164" text-anchor="middle" class="t">铭牌</text>
+      <text x="612" y="192" text-anchor="middle" class="tm">三个抽屉</text>
+      <text x="612" y="206" text-anchor="middle" class="tm">一次装齐</text>
+
+      <text x="505" y="238" text-anchor="middle" class="tm" fill="#15803d">✅ 三件套一次性整包写入</text>
+      <text x="505" y="252" text-anchor="middle" class="tm" fill="#15803d">models/HT12/{缺陷类型}/</text>
+    </svg>
+    <figcaption>原子化交付两幕:左——训练期间一切产物只进 .tmp/ 草稿区,models/ 档案柜🔒紧锁、空空如也,训练失败也不留半成品;右——训练成功结束的瞬间,🔓开柜,LoRA 权重、形态模板、出厂铭牌三件套一次性整包写入。</figcaption>
+  </figure>
+
+  <h4>开柜交付的"三件套"到底是什么?</h4>
+  <div class="tscroll">
+  <table class="tbl">
+    <tr><th>交付物</th><th>到底是什么</th><th>里面装什么</th><th>以后谁用它、干什么</th></tr>
+    <tr>
+      <td><b>lora_weights.safetensors</b><br><small>LoRA 权重文件</small></td>
+      <td>Step 2 训练的直接成果——那本<b>"砂眼画法笔记"的本体</b></td>
+      <td>一大堆数字(旋钮参数,容量 = rank 32);既不是程序也不是图片,个头小(以 MB 计)</td>
+      <td>Step 3 生图时把它<b>挂载</b>到 FLUX 上,画师立刻会画这类缺陷;<code class="inl">--skip_train</code> 跳过训练秒级生图,靠的也是它</td>
+    </tr>
+    <tr>
+      <td><b>templates/</b><br><small>形态模板库</small></td>
+      <td>一小叠<b>黑白剪影图</b>(*.png 二值图),每张 = 一个真实缺陷的轮廓形状</td>
+      <td>张数 = 真实样本数(如 38 张);来自 Step 1 把原多边形(0px 紧贴边缘)直接转成的二值图,训练成功前暂存 .tmp/,此刻一并转正</td>
+      <td>Step 3 <b>捏新形状的"橡皮泥原模"</b>——旋转 / 缩放 / 弹性变形都以它为底,保证新缺陷不跑偏</td>
+    </tr>
+    <tr>
+      <td><b>manifest.json</b><br><small>出厂铭牌</small></td>
+      <td>代码<b>自动生成</b>的小文本档案(标准 JSON,无注释)</td>
+      <td>产品、缺陷类型、触发词、样本数、训练参数、面积统计等(字段逐个讲解见 12.2 节)</td>
+      <td><b>人和程序日后查档</b>:半年后想知道"这包资产当年怎么训的",翻铭牌就行,不用猜</td>
+    </tr>
+  </table>
+  </div>
+
+  <div class="co plain">
+    <span class="tag">💡 大白话:为什么三件必须绑在一起?</span>
+    <p>光有权重没模板 → Step 3 没有形状底坯,新缺陷形状会跑偏;光有模板没权重 → 画师没学会画法,画不逼真;没有铭牌 → 日后没人说得清这套资产的来历。三件互相配套,<b>缺一件整包就不可用</b>——所以干脆"要么整箱到货,要么一件不发"。</p>
+  </div>
+  <div class="co why">
+    <span class="tag">🎯 为什么要"原子化"?</span>
+    <p>训练<u>未成功前</u>,<code class="inl">models/</code> 目录保持<b>绝对干净</b>——绝不出现"有权重没模板"或"有模板没元数据"的半成品。只有训练成功结束,才一次性产出<b>完整可用</b>的模型包(权重 + 形态模板 + 元数据)。像快递整箱签收,没有"先到半箱"。</p>
+  </div>
+
+  <div class="co plain">
+    <span class="tag">💡 大白话</span>
+    <p>Step 2 像给一位本来就会画画的大师傅(FLUX)<b>报了个"砂眼专修班"</b>(LoRA):只给他看砂眼的照片(核心区 1.0),顺便看看砂眼和金属怎么接茬(缓冲带 0.4~1.0),完全不考背景静物(0 分权重)。结业那天(训练成功),他的"砂眼笔记"连同教材范本(模板)和结业证书(manifest)一起归档进档案柜。</p>
+  </div>
+</section>
+
+<!-- ================= 第 7 章 ================= -->
+<section id="step3">
+  <div class="chap"><span class="chapno">第 7 章</span><h2>Step 3 详解:掩码裂变与局部重绘</h2></div>
+  <div class="chapref">对应原文 §三 Step 3 + §四.1「真实模板弹性变形」「合法分区采样 + 框外零篡改」</div>
+
+  <p>从这一步起进入"量产"阶段,四个动作一气呵成:<b>裁干净底图 → 捏新形状 → AI 画缺陷 → 羽化回贴</b>。</p>
+
+  <h3>7.1 裁干净底图 P_clean:从合法分区里挑一块"无瑕白布"</h3>
+  <ul>
+    <li>只在点位图 <b>合法的检测分区</b>内取材(分区定义来自 <code class="inl">{基准图名}.json</code>,比如只允许在「加工面」里放缺陷);</li>
+    <li>随机位置裁 <span class="kn">512×512</span> 的<b>干净金属块</b>(记作 P_clean);</li>
+    <li>裁的时候<b>避开已有的 .tmp 标注区</b>——别把真缺陷裁进来当底布。</li>
+  </ul>
+  <div class="co why">
+    <span class="tag">🎯 为什么非要从"合法分区"里裁?</span>
+    <p>保证生成的缺陷,它的<b>底座纹理就是该产品真实待检面的材质纹理</b>。在加工面上训练出的砂眼,贴到非加工面就假了;底布必须来自"缺陷真正会出现的地方"。</p>
+  </div>
+
+  <h3>7.2 捏新形状:揉橡皮泥式弹性变形</h3>
+  <p>从 <code class="inl">models/HT12/{缺陷类型}/templates/</code> 抽取真实缺陷轮廓,然后:</p>
+  <ul>
+    <li><b>随机旋转 / 翻转 / 缩放</b>:换个朝向、镜像一下、放大缩小;</li>
+    <li><b>弹性扭曲变形</b>:叠加一张二维平滑随机位移场,把轮廓推得歪歪扭扭又自然;</li>
+    <li>变形后的轮廓<b>再外扩 <span class="kn">8px</span></b>,得到重绘粗框 <b>M_local</b>。</li>
+  </ul>
+
+  <figure class="fig">
+    <svg viewBox="0 0 680 210" role="img" aria-label="弹性变形示意:左边一个真实缺陷模板,经揉橡皮泥式变形后得到右边多个不同形状的变体">
+      <rect x="30" y="35" width="130" height="130" rx="6" class="metal"/>
+      <path d="M78,72 C93,67 108,76 110,92 C112,110 98,122 81,123 C63,124 50,112 51,96 C52,82 65,74 78,72 Z" class="defect"/>
+      <path d="M78,79 C89,76 98,83 99,93 C100,105 92,112 82,113 C72,114 64,107 65,97 C66,89 71,81 78,79 Z" class="defectd"/>
+      <text x="95" y="185" text-anchor="middle" class="tm">真实缺陷模板</text>
+      <text x="95" y="200" text-anchor="middle" class="tm">(models/.../templates/)</text>
+      <path d="M185,100 h95" stroke="#64748b" stroke-width="2.2" marker-end="url(#ah1)"/>
+      <text x="232" y="70" text-anchor="middle" class="tb">随机旋转 / 翻转 / 缩放</text>
+      <text x="232" y="88" text-anchor="middle" class="t">+ 二维平滑随机位移场</text>
+      <text x="232" y="132" text-anchor="middle" class="t">(揉橡皮泥)</text>
+      <text x="232" y="150" text-anchor="middle" class="tm">→ 再外扩 8px 得粗框 M_local</text>
+      <rect x="315" y="20" width="100" height="100" rx="6" class="metal"/>
+      <path d="M360,48 C376,44 390,54 391,68 C392,84 380,94 366,93 C352,92 344,82 347,70 C349,60 353,50 360,48 Z" class="defect" transform="rotate(18 367 70)"/>
+      <text x="365" y="138" text-anchor="middle" class="tm">变体 1</text>
+      <rect x="430" y="20" width="100" height="100" rx="6" class="metal"/>
+      <path d="M462,60 C476,55 488,64 488,78 C488,94 475,103 461,100 C448,97 442,86 446,74 C449,65 455,62 462,60 Z" class="defect" transform="scale(1.06 0.92) translate(-28 5)"/>
+      <text x="480" y="138" text-anchor="middle" class="tm">变体 2</text>
+      <rect x="545" y="20" width="100" height="100" rx="6" class="metal"/>
+      <path d="M585,52 C600,48 613,58 614,73 C615,90 601,100 586,98 C572,96 565,85 569,73 C572,63 578,55 585,52 Z" class="defect" transform="rotate(-24 590 74)"/>
+      <text x="595" y="138" text-anchor="middle" class="tm">变体 3</text>
+      <rect x="372" y="140" width="100" height="60" rx="6" class="metal" opacity=".7"/>
+      <text x="422" y="175" text-anchor="middle" class="tm">…… 变体 N</text>
+      <text x="505" y="175" class="tm" fill="#15803d">✓ 没有两个形状完全雷同</text>
+      <text x="505" y="192" class="tm" fill="#15803d">✓ 但都保留该类缺陷的形态规律</text>
+    </svg>
+    <figcaption>弹性变形:真实模板(左)经旋转/翻转/缩放 + 随机位移场"揉"一遍,得到形状各异但"家族特征"不变的变体(右)。</figcaption>
+  </figure>
+
+  <div class="co why">
+    <span class="tag">🎯 为什么要用真实模板"揉",而不是凭空随机画?</span>
+    <p>直接随机画,形状可能根本不像这类缺陷。以真实轮廓为基底做弹性变形,既<b>保留该类缺陷的物理形态规律</b>(砂眼的凹凸锯齿感、划痕的细长弧度),又保证生成的几百个新缺陷<b>没有两个形状完全雷同</b>——多样性和真实性兼得。</p>
+  </div>
+
+  <h3>7.3 AI 局部重绘:挂上 LoRA 开画</h3>
+  <p><b>挂载该缺陷的 LoRA</b>(把 Step 2 训好的专项笔记插到 FLUX 画师身上)之后,还要凑齐三样"派工输入",AI 才开工:</p>
+  <ul>
+    <li><b>① 画布</b>:P_clean,512×512 干净金属块(7.1 裁的);</li>
+    <li><b>② 洞(在哪画)</b>:粗框 M_local——7.2 捏好形又外扩 8px 的重绘范围;</li>
+    <li><b>③ 派工单(画什么)</b>:文字提示 + 触发词 <code class="inl">[DEF_HT12_砂眼]</code>,点名唤醒 LoRA 笔记。</li>
+  </ul>
+
+  <figure class="fig">
+    <svg viewBox="0 0 680 280" role="img" aria-label="局部重绘派工图:画布、洞、带触发词的提示三样输入,交给插好 LoRA 笔记的 FLUX,只在洞内从噪点擦出缺陷,洞外像素不动">
+      <rect x="18" y="22" width="175" height="58" rx="10" fill="#fbfaf6" stroke="#d8d2c0" stroke-width="2"/>
+      <text x="105" y="43" text-anchor="middle" class="tb">① 画布 P_clean</text>
+      <text x="105" y="63" text-anchor="middle" class="t">512×512 干净金属块</text>
+
+      <rect x="18" y="96" width="175" height="58" rx="10" fill="#fdf0e7" stroke="#e7b58a" stroke-width="2"/>
+      <text x="105" y="117" text-anchor="middle" class="tb">② 洞 M_local</text>
+      <text x="105" y="137" text-anchor="middle" class="t">变形模板 + 8px 粗框</text>
+
+      <rect x="18" y="170" width="175" height="76" rx="10" fill="#f3eefe" stroke="#ddd3f8" stroke-width="2"/>
+      <text x="105" y="191" text-anchor="middle" class="tb">③ 派工单(画什么)</text>
+      <text x="105" y="210" text-anchor="middle" class="t">文字提示 + 触发词</text>
+      <text x="105" y="228" text-anchor="middle" class="tm">[DEF_HT12_砂眼] ← 点名</text>
+
+      <rect x="285" y="36" width="120" height="40" rx="8" fill="#fdf0e7" stroke="#e7b58a" stroke-width="2"/>
+      <text x="345" y="54" text-anchor="middle" class="tb">✏️ LoRA 笔记</text>
+      <text x="345" y="70" text-anchor="middle" class="tm">已插上(挂载)</text>
+      <path d="M 345,78 L 345,85" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
+
+      <rect x="255" y="88" width="180" height="130" rx="12" fill="#eaf2fe" stroke="#93b4f5" stroke-width="2"/>
+      <text x="345" y="112" text-anchor="middle" class="tb" font-size="14">FLUX(画师)</text>
+      <text x="345" y="134" text-anchor="middle" class="t">只在洞内作画:</text>
+      <text x="345" y="152" text-anchor="middle" class="t">从噪点一步步擦出缺陷</text>
+      <text x="345" y="170" text-anchor="middle" class="tm">(画法见 6.2)</text>
+      <text x="345" y="192" text-anchor="middle" class="t" fill="#b91c1c">洞外像素:一个都不碰</text>
+
+      <path d="M 195,51 C 225,58 238,80 251,102" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
+      <path d="M 195,125 C 222,127 236,131 251,134" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
+      <path d="M 195,208 C 225,202 236,192 251,184" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
+      <path d="M 437,153 L 486,153" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
+
+      <rect x="505" y="75" width="140" height="130" rx="6" class="metal"/>
+      <path d="M515,100 h120 M515,180 h120" class="metalln" opacity=".5"/>
+      <rect x="535" y="100" width="80" height="80" class="dashb"/>
+      <text x="575" y="94" text-anchor="middle" class="tm">M_local(洞)</text>
+      <path d="M562,118 C574,113 586,121 588,134 C590,149 579,159 566,159 C553,159 545,149 548,136 C550,126 555,121 562,118 Z" class="defect"/>
+      <path d="M566,128 C573,126 580,131 580,139 C580,148 573,152 566,152 C559,152 555,146 557,138 C558,133 561,130 566,128 Z" class="defectd"/>
+      <text x="512" y="196" class="tm">洞外原样</text>
+      <text x="575" y="224" text-anchor="middle" class="tb">画完的 512 图(此刻)</text>
+      <text x="575" y="243" text-anchor="middle" class="t">洞内:新缺陷显影</text>
+      <text x="575" y="261" text-anchor="middle" class="tm">洞外:与 P_clean 逐像素相同</text>
+    </svg>
+    <figcaption>局部重绘派工图:三样输入(画布、洞、带触发词的提示)交给插好 LoRA 笔记的 FLUX 画师;它只在洞内按 6.2 的去噪画法擦出缺陷,洞外像素与 P_clean 逐像素相同——这正是 Step 4 差分抠图能成立的根基。</figcaption>
+  </figure>
+
+  <p>画法就是 6.2 讲过的"从噪点里擦出图",只不过 Fill 版把"擦"的动作限制在洞内:洞内的噪点一边参考洞外的纹理、一边按 LoRA 笔记的画法渐渐显影成缺陷;洞外像素从头到尾一个不碰。</p>
+
+  <div class="co plain">
+    <span class="tag">💡 大白话:像给装修队派单</span>
+    <p>房子在哪(画布 P_clean)、只刷哪面墙(洞 M_local)、刷成什么风格(提示词 + 触发词点名"砂眼笔记")——三样写清楚,装修队(FLUX + 挂载的 LoRA)进场只刷指定的那面墙,屋里其他地方绝不乱动。</p>
+  </div>
+
+  <h3>7.4 无损羽化回贴:只动框内,框外一根毫毛不伤</h3>
+  <ul>
+    <li>把画好的区域贴回 P_clean 时,粗框边缘<b>向内 <span class="kn">4px</span> 做余弦羽化</b>融合——边缘透明度按余弦曲线平滑滑落,没有硬切缝;</li>
+    <li><b>框外像素 100% 保持 P_clean 原样</b>,得到最终成品图 P_final。</li>
+  </ul>
+
+  <figure class="fig">
+    <svg viewBox="0 0 680 240" role="img" aria-label="局部重绘四格漫画:干净底图、放置粗框、AI 画出缺陷、羽化融合回贴">
+      <defs>
+        <radialGradient id="featherG" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="84%" stop-color="#f59e0b" stop-opacity="0.0"/>
+          <stop offset="95%" stop-color="#f59e0b" stop-opacity="0.55"/>
+          <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.85"/>
+        </radialGradient>
+      </defs>
+      <rect x="15" y="30" width="130" height="130" rx="6" class="metal"/>
+      <path d="M25,60 h110 M25,130 h110 M50,35 v120 M100,35 v120" class="metalln" opacity=".5"/>
+      <text x="80" y="182" text-anchor="middle" class="tb">① 干净底图</text>
+      <text x="80" y="198" text-anchor="middle" class="tm">P_clean(512×512)</text>
+      <text x="80" y="214" text-anchor="middle" class="tm">合法分区里随机裁的</text>
+
+      <text x="160" y="100" class="tb" fill="#64748b" font-size="18">→</text>
+
+      <rect x="183" y="30" width="130" height="130" rx="6" class="metal"/>
+      <path d="M193,60 h110 M193,130 h110 M218,35 v120 M268,35 v120" class="metalln" opacity=".5"/>
+      <path d="M236,68 C254,63 270,74 272,90 C274,109 259,122 241,122 C223,122 211,109 213,92 C215,79 223,71 236,68 Z" class="ringg"/>
+      <path d="M236,68 C254,63 270,74 272,90 C274,109 259,122 241,122 C223,122 211,109 213,92 C215,79 223,71 236,68 Z" class="dasho"/>
+      <text x="248" y="182" text-anchor="middle" class="tb">② 摆好粗框 M_local</text>
+      <text x="248" y="198" text-anchor="middle" class="tm">变形模板 + 外扩 8px</text>
+      <text x="248" y="214" text-anchor="middle" class="tm">橙色圈 = 作画区(未落笔)</text>
+
+      <text x="328" y="100" class="tb" fill="#64748b" font-size="18">→</text>
+
+      <rect x="351" y="30" width="130" height="130" rx="6" class="metal"/>
+      <path d="M361,60 h110 M361,130 h110 M386,35 v120 M436,35 v120" class="metalln" opacity=".5"/>
+      <path d="M236,68 C254,63 270,74 272,90 C274,109 259,122 241,122 C223,122 211,109 213,92 C215,79 223,71 236,68 Z" class="dasho" opacity=".55" transform="translate(174 0)"/>
+      <path d="M240,78 C252,75 262,83 263,94 C264,107 254,115 243,115 C232,115 225,107 227,96 C229,87 233,80 240,78 Z" class="defect" transform="translate(171 -1)"/>
+      <path d="M244,88 C251,86 257,91 257,98 C257,106 250,110 244,110 C238,110 234,105 236,98 C237,93 240,89 244,88 Z" class="defectd" transform="translate(171 -1)"/>
+      <text x="416" y="182" text-anchor="middle" class="tb">③ AI 画出新缺陷</text>
+      <text x="416" y="198" text-anchor="middle" class="tm">挂载该缺陷的 LoRA</text>
+      <text x="416" y="214" text-anchor="middle" class="tm">(Step 2 的专修班徒弟)</text>
+
+      <text x="496" y="100" class="tb" fill="#64748b" font-size="18">→</text>
+
+      <rect x="519" y="30" width="130" height="130" rx="6" class="metal"/>
+      <path d="M529,60 h110 M529,130 h110 M554,35 v120 M604,35 v120" class="metalln" opacity=".5"/>
+      <path d="M236,68 C254,63 270,74 272,90 C274,109 259,122 241,122 C223,122 211,109 213,92 C215,79 223,71 236,68 Z" fill="url(#featherG)" transform="translate(342 0)"/>
+      <path d="M236,68 C254,63 270,74 272,90 C274,109 259,122 241,122 C223,122 211,109 213,92 C215,79 223,71 236,68 Z" class="dasho" transform="translate(342 0)"/>
+      <path d="M240,78 C252,75 262,83 263,94 C264,107 254,115 243,115 C232,115 225,107 227,96 C229,87 233,80 240,78 Z" class="defect" transform="translate(339 -1)"/>
+      <path d="M244,88 C251,86 257,91 257,98 C257,106 250,110 244,110 C238,110 234,105 236,98 C237,93 240,89 244,88 Z" class="defectd" transform="translate(339 -1)"/>
+      <text x="521" y="50" class="tm" fill="#b45309">4px 羽化带</text>
+      <line x1="549" y1="54" x2="557" y2="64" class="lead"/>
+      <text x="645" y="50" text-anchor="end" class="tm" fill="#15803d">框外 ✓</text>
+      <text x="584" y="182" text-anchor="middle" class="tb">④ 羽化回贴 = P_final</text>
+      <text x="584" y="198" text-anchor="middle" class="tm">边缘向内 4px 余弦羽化</text>
+      <text x="584" y="214" text-anchor="middle" class="tm">框外 100% 原样</text>
+    </svg>
+    <figcaption>局部重绘四步:① 从合法分区裁干净底图 → ② 把弹性变形后的粗框 M_local 摆上去(橙色虚线圈 = AI 的作画区,此时画布依然干净、还没落笔)→ ③ 挂 LoRA 的 AI 只在框内画缺陷 → ④ 粗框边缘<b>向内 4px</b> 余弦羽化融合(橙色窄带),框外像素与 P_clean 完全相同。</figcaption>
+  </figure>
+
+  <div class="co why">
+    <span class="tag">🎯 为什么"框外零篡改"是死规矩?</span>
+    <p>这是给下一步(<b>前后相减自动抠图</b>)埋的伏笔:既然框外像素和 P_clean <b>一字不差</b>,那么两张图逐像素相减时,框外差值必然是 0——"哪里变了"就等于"缺陷画在哪",全自动抠图才有可能成立。</p>
+  </div>
+
+  <p class="fnote">过程文件都缓存在 <code class="inl">.tmp/{产品}/{缺陷类型}/2_inpaint/</code>(重绘前干净底图 + 重绘后对比),随时可翻看、可整目录删除。</p>
+</section>
+
+<!-- ================= 第 8 章 ================= -->
+<section id="step4">
+  <div class="chap"><span class="chapno">第 8 章</span><h2>Step 4 详解:前后差分自动抠图与导出</h2></div>
+  <div class="chapref">对应原文 §三 Step 4 + §四.1 后三行(差分提纯 / 底噪双阈值 / 紧包导出)</div>
+
+  <h3>8.1 前后相减:玩一局"大家来找茬"</h3>
+  <p>拿【画完缺陷的图 <b>P_final</b>】减去【画之前的干净底图 <b>P_clean</b>】,对每个像素算 <span class="kn">|P_final − P_clean|</span>——同时看<b>灰度差</b>和<b>纹理梯度差</b>(纹理梯度 = 局部纹路变化的剧烈程度,专抓"亮度没变但纹路变了"的情况)。</p>
+
+  <figure class="fig">
+    <svg viewBox="0 0 680 250" role="img" aria-label="差分示意:P_final 减 P_clean 等于差分图,真缺陷处差值极大,被 AI 补成正常金属处差值接近零">
+      <rect x="20" y="35" width="170" height="130" rx="6" class="metal"/>
+      <path d="M30,65 h150 M30,135 h150 M60,40 v120 M140,40 v120" class="metalln" opacity=".5"/>
+      <path d="M236,68 C254,63 270,74 272,90 C274,109 259,122 241,122 C223,122 211,109 213,92 C215,79 223,71 236,68 Z" class="dasho" opacity=".8" transform="translate(-138 8)"/>
+      <path d="M240,78 C252,75 262,83 263,94 C264,107 254,115 243,115 C232,115 225,107 227,96 C229,87 233,80 240,78 Z" class="defect" transform="translate(-141 4)"/>
+      <path d="M244,88 C251,86 257,91 257,98 C257,106 250,110 244,110 C238,110 234,105 236,98 C237,93 240,89 244,88 Z" class="defectd" transform="translate(-141 4)"/>
+      <text x="150" y="52" class="tm" fill="#b45309">粗框</text>
+      <line x1="149" y1="56" x2="136" y2="72" class="lead"/>
+      <text x="105" y="190" text-anchor="middle" class="tb">P_final(画完缺陷)</text>
+      <text x="105" y="207" text-anchor="middle" class="tm">粗框内还有 AI 补的</text>
+      <text x="105" y="222" text-anchor="middle" class="tm">"正常金属"过渡区</text>
+
+      <text x="212" y="108" class="tb" fill="#64748b" font-size="20">−</text>
+
+      <rect x="240" y="35" width="170" height="130" rx="6" class="metal"/>
+      <path d="M250,65 h150 M250,135 h150 M280,40 v120 M360,40 v120" class="metalln" opacity=".5"/>
+      <path d="M236,68 C254,63 270,74 272,90 C274,109 259,122 241,122 C223,122 211,109 213,92 C215,79 223,71 236,68 Z" class="dasho" opacity=".8" transform="translate(83 8)"/>
+      <text x="325" y="190" text-anchor="middle" class="tb">P_clean(画之前)</text>
+      <text x="325" y="207" text-anchor="middle" class="tm">和 P_final 框外逐像素</text>
+      <text x="325" y="222" text-anchor="middle" class="tm">100% 相同</text>
+
+      <text x="432" y="108" class="tb" fill="#64748b" font-size="20">=</text>
+
+      <rect x="460" y="35" width="170" height="130" rx="6" fill="#171310"/>
+      <circle cx="500" cy="70" r="1.4" fill="#3a332b"/><circle cx="600" cy="60" r="1.4" fill="#3a332b"/><circle cx="560" cy="145" r="1.4" fill="#3a332b"/><circle cx="480" cy="150" r="1.4" fill="#3a332b"/><circle cx="620" cy="120" r="1.4" fill="#3a332b"/>
+      <path d="M236,68 C254,63 270,74 272,90 C274,109 259,122 241,122 C223,122 211,109 213,92 C215,79 223,71 236,68 Z" fill="none" stroke="#6b6257" stroke-width="1.5" stroke-dasharray="5 4" transform="translate(303 5)"/>
+      <path d="M521,76 C533,73 543,81 544,92 C545,105 535,113 524,113 C513,113 506,105 508,94 C510,85 514,78 521,76 Z" fill="#fde047" transform="translate(20 4)"/>
+      <path d="M525,86 C532,84 538,89 538,96 C538,104 531,108 525,108 C519,108 515,103 517,96 C518,91 521,87 525,86 Z" fill="#fef9c3" transform="translate(18 1)"/>
+      <text x="545" y="157" text-anchor="middle" class="tm" fill="#a8a29e">虚线圈=粗框 · 框外差恒为 0</text>
+      <text x="545" y="190" text-anchor="middle" class="tb">差分图 |P_final − P_clean|</text>
+      <text x="545" y="207" text-anchor="middle" class="tm" fill="#15803d">✓ 补成正常金属处:差 ≈ 0,自动归零</text>
+      <text x="545" y="222" text-anchor="middle" class="tm" fill="#b45309">✓ 真缺陷处:差值极大 → 发亮(要的就是它)</text>
+    </svg>
+    <figcaption>差分提纯:两张图的粗框(橙色虚线圈)位于同一位置——框外逐像素相同,差值恒为 0;框内只有中间一小段是真缺陷,其余被 AI 补成了正常金属(肉眼看不出差别)。前后一减,补金属处自动抵消归零,只剩真缺陷在差分图上发亮。</figcaption>
+  </figure>
+
+  <div class="co plain">
+    <span class="tag">💡 大白话 + 原文的数字例子</span>
+    <p>给 AI 的重绘框是<b>带缓冲带的宽框</b>:比如框有 <span class="kn">20px</span> 宽,AI 在中间画了条 <span class="kn">5px</span> 宽的真划痕,两边各 <span class="kn">15px</span> 被 AI 补成了正常金属。前后相减后——补成正常金属的地方差值接近 0,<b>直接抵消归零</b>;只有真正长出缺陷的那 5px 差值巨大。于是<b>无需人工抠图,全自动提纯</b>出精准的 <code class="inl">_mask.png</code>。</p>
+  </div>
+
+  <h3>8.2 底噪自适应卡线:按"背景吵不吵"定及格线</h3>
+  <p>差分图有了,还差一条"多亮才算缺陷"的分界线。做法分两步:</p>
+  <ol>
+    <li><b>先测底噪</b>:量出<b>框外正常金属</b>的底噪波动 σ(干净区域的"呼吸声"有多大);</li>
+    <li><b>再双阈值卡线</b>:
+      <ul>
+        <li>差值 &gt; <span class="kn">3.5σ</span> → 判为<b>缺陷核心</b>(比呼吸声大 3.5 倍,肯定是真动静);</li>
+        <li>再把核心周围 &gt; <span class="kn">1.8σ</span> 的<b>相连</b>像素吸纳进掩码(缺陷边缘的阴影过渡,暗一点但和核心连着,也要)。</li>
+      </ul>
+    </li>
+  </ol>
+  <p>两步合起来,得到像素级精准掩码 <b>M_GT</b>——它就是落盘的 <code class="inl">{名}_mask.png</code>。</p>
+
+  <div class="co plain">
+    <span class="tag">💡 大白话:监考老师抓说话</span>
+    <p>把一张差分图想象成一间<b>上自习的教室</b>,程序就是监考老师,分两步:</p>
+    <ol style="margin:6px 0">
+      <li><b>先摸清"这间屋的安静"有多响</b>:教室从来不是绝对无声——呼吸、翻页、椅子吱呀,总有个稳定的背景响度,这就是<b>底噪 σ</b>。要测就去<b>保证没人讲话的角落</b>测——对应"框外正常金属"(那里确定没被 AI 动过,基准才可信);</li>
+      <li><b>再按现场定及格线,不拍脑袋定死</b>:比日常吵闹响 3.5 倍的,铁定有人在说话 = 缺陷核心;1.8 倍以上、又<b>从说话人那边连过来</b>的"余音" = 缺陷边缘,也算他一部分;孤零零一声椅子响,哪怕过了 1.8 倍也不算——<b>不相连,不冤枉</b>。</li>
+    </ol>
+  </div>
+
+  <figure class="fig">
+    <svg viewBox="0 0 680 330" role="img" aria-label="教室查说话与金属差分图的对照声音尺:底噪、孤立噪点、相连边缘、缺陷核心分别对应不要、不收、吸附、必须收">
+      <path d="M 340,300 L 340,62" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
+      <text x="340" y="50" text-anchor="middle" class="tm">↑ 更响 = 差值更大</text>
+
+      <line x1="70" y1="145" x2="645" y2="145" stroke="#dc2626" stroke-width="1.8" stroke-dasharray="6 4"/>
+      <text x="75" y="139" class="tm" fill="#dc2626">3.5σ 核心线</text>
+      <line x1="70" y1="225" x2="645" y2="225" stroke="#b45309" stroke-width="1.8" stroke-dasharray="6 4"/>
+      <text x="75" y="220" class="tm" fill="#b45309">1.8σ 吸附线</text>
+
+      <text x="195" y="75" text-anchor="middle" class="tm">教室里(比喻)</text>
+      <text x="485" y="75" text-anchor="middle" class="tm">金属差分图上(实际)</text>
+
+      <text x="195" y="100" text-anchor="middle" class="t" fill="#15803d">🗣️ 有人大声说话</text>
+      <text x="485" y="100" text-anchor="middle" class="t" fill="#15803d">缺陷核心 &gt; 3.5σ ✓ 必须收</text>
+
+      <text x="195" y="168" text-anchor="middle" class="t" fill="#15803d">🗣️ 说话人的余音</text>
+      <text x="195" y="184" text-anchor="middle" class="tm">(从说话人方向连过来)</text>
+      <text x="485" y="168" text-anchor="middle" class="t" fill="#15803d">缺陷边缘阴影 &gt; 1.8σ 且相连 ✓ 吸附</text>
+
+      <text x="195" y="204" text-anchor="middle" class="t" fill="#dc2626">🪑 椅子吱呀一声(孤零零)</text>
+      <text x="485" y="204" text-anchor="middle" class="t" fill="#dc2626">孤立噪点 &gt; 1.8σ 但不连核心 ✗ 不收</text>
+
+      <text x="195" y="272" text-anchor="middle" class="t" fill="#8a8477">🌬️ 呼吸、翻页(教室日常)</text>
+      <text x="485" y="272" text-anchor="middle" class="t" fill="#8a8477">正常金属底噪 &lt; 1.8σ ✗ 不要</text>
+
+      <text x="340" y="315" text-anchor="middle" class="tm" fill="#6d28d9">💡 整间教室没有声音超过 3.5σ = 没人说话 = AI 没画出缺陷 → 废片重画(见 8.3)</text>
+    </svg>
+    <figcaption>"教室查说话"对照尺:声音(差值)从下往上越来越响——1.8σ 线以下是日常底噪,一概不要;两线之间看"连不连核心"定去留(余音收、椅子响不收);3.5σ 线以上必收。每张图现场重测 σ,两条线的高低自动适应背景吵闹程度。</figcaption>
+  </figure>
+
+  <div class="co why">
+    <span class="tag">🎯 为什么两条线,还死抠"相连"?</span>
+    <p>只用高线 <span class="kn">3.5σ</span>:缺陷边缘的暗影过渡会被切掉,掩码<b>偏小</b>——像只框到说话人的嘴、丢了半张脸;只用低线 <span class="kn">1.8σ</span>:背景噪点大量混入,掩码<b>长毛</b>。高线定核心、低线只收"连着核心的",两头的好处都拿到;而"不相连就不收"保证了孤立的椅子响(噪点)永远冤枉不到人。</p>
+  </div>
+
+  <div class="co plain">
+    <span class="tag">💡 "自适应"到底自适应在哪?</span>
+    <p>不同教室的安静程度天差地别(图书馆 vs 车间旁的教室)。<b>每一张图、每一个框都现场重测一次 σ</b>,及格线跟着现场走:反光强、底噪大的产品,线自动抬高;干净细腻的产品,线自动放低——不管背景吵不吵,"超过 3.5σ 就是核心"这条规则永远成立。</p>
+  </div>
+
+  <figure class="fig">
+    <svg viewBox="0 0 680 175" role="img" aria-label="双阈值卡线示意图:差值强度轴上,1.8σ 与 3.5σ 两条分界线划出背景、边缘吸附、缺陷核心三个区">
+      <text x="30" y="26" class="t">σ = 先在<b>框外正常金属</b>上测出来的底噪波动(每个产品、每张图现测现用 → 所以叫"自适应")</text>
+      <rect x="40" y="58" width="600" height="30" rx="6" fill="#9ca3af"/>
+      <rect x="300" y="58" width="170" height="30" fill="#f59e0b"/>
+      <rect x="470" y="58" width="170" height="30" rx="6" fill="#dc2626"/>
+      <rect x="40" y="58" width="260" height="30" rx="6" fill="#4b5563"/>
+      <line x1="300" y1="46" x2="300" y2="100" stroke="#b45309" stroke-width="2" stroke-dasharray="5 4"/>
+      <line x1="470" y1="46" x2="470" y2="100" stroke="#dc2626" stroke-width="2" stroke-dasharray="5 4"/>
+      <text x="300" y="40" text-anchor="middle" class="tb" fill="#b45309">1.8σ 吸附线</text>
+      <text x="470" y="40" text-anchor="middle" class="tb" fill="#dc2626">3.5σ 核心线</text>
+      <text x="170" y="108" text-anchor="middle" class="tm">背景噪点(不要)</text>
+      <text x="385" y="108" text-anchor="middle" class="tm">边缘阴影(与核心相连才吸附)</text>
+      <text x="555" y="108" text-anchor="middle" class="tm" fill="#dc2626">缺陷核心(必须要)</text>
+      <line x1="40" y1="140" x2="640" y2="140" stroke="#9aa2b1" stroke-width="1.5" marker-end="url(#ah1)"/>
+      <text x="340" y="162" text-anchor="middle" class="tm">差值强度(灰度差 + 纹理梯度差)→</text>
+    </svg>
+    <figcaption>双阈值卡线:先测框外底噪 σ,再看差分值落在哪一档——过 3.5σ 是核心,1.8σ~3.5σ 且与核心相连的算边缘,其余是背景。</figcaption>
+  </figure>
+
+  <div class="co why">
+    <span class="tag">🎯 为什么不用教科书常用的大津法(Otsu)?</span>
+    <p>大津法会<b>强行把画面按比例分成亮暗两半</b>。遇到微小缺陷(比如 <span class="kn">3×3</span> 像素的小砂眼),缺陷只占画面一丁点,大津法为了"凑够两半"会把整圈背景噪点都误判成缺陷。</p>
+    <p>按<b>背景底噪倍数</b>卡线就没这个问题:不管缺陷多大或多小,只要真画出来了,差值一定远超底噪,就能精准抠出。另外它还自带"废片探测器"——<b>若全框差值都没超过 3.5σ,说明压根没画出缺陷</b>,直接进下一节的质量门控淘汰。</p>
+  </div>
+
+  <h3>8.3 质量门控:不合格的废片直接扔</h3>
+  <p>抠出来的结果要过两道检查,任何一道不过就判定为"未成功画出缺陷"的废片,<b>自动丢弃重画</b>:</p>
+  <div class="funnel">
+    <div class="fnode">一张画完的 512×512 图(P_final)</div>
+    <div class="fvarr">↓</div>
+    <div class="fnode">检查 ①:抠出的<b>缺陷面积</b>够大吗?(过小 = 没画出来)</div>
+    <div class="fvarr">↓</div>
+    <div class="fnode">检查 ②:<b>峰值信噪比</b> ≥ <span class="kn">3.5</span> 吗?(最大差值 ÷ 底噪 σ,不够醒目 = 假缺陷)</div>
+    <div class="fvarr">↓</div>
+    <div class="fnode ok">✅ 通过 → 紧包裁剪、落盘入库</div>
+    <div class="fnode bad">❌ 任一不过 → 判定废片,自动丢弃、重新画一张</div>
+  </div>
+
+  <h3>8.4 紧包裁剪落盘:切小图、留边距、写素材库</h3>
+  <p>在 512×512 图上抠出精准掩码 M_GT 后,按 <b>M_GT 的外接矩形</b>、四周各留 <span class="kn">8px</span> 边距裁出缺陷小图,写入 <code class="inl">datasets/HT12/assets/{缺陷类型}/synth/{序号}.png</code> + <code class="inl">{序号}_mask.png</code>——一对成品素材就此诞生。</p>
+
+  <div class="co plain">
+    <span class="tag">💡 大白话:切出来多大?不是 512!</span>
+    <p>512×512 只是 AI 的<b>工作画布</b>(训练、重绘、差分都在上面进行),落盘的是从画布上"紧包"裁下来的小图:<b>缺陷多大,图就多大,每张小图尺寸都不一样</b>。为什么不带着大片金属一起存?下游 train 是"把小缺陷贴到大图随机位置"训练的,素材只要缺陷本体加一圈边距就够;而且人工抠的素材也是这个紧包格式,对齐了才能零修改无缝调用。</p>
+  </div>
+
+  <figure class="fig">
+    <svg viewBox="0 0 680 310" role="img" aria-label="紧包裁剪示意:512 工作画布上按外接矩形加 8px 裁出小图,内容图与掩码图同尺寸逐像素对应">
+      <rect x="25" y="40" width="240" height="220" rx="6" class="metal"/>
+      <path d="M40,70 h210 M40,130 h210 M40,230 h210 M80,50 v200 M200,50 v200" class="metalln" opacity=".5"/>
+      <text x="30" y="62" class="tm" fill="#1d4ed8">蓝虚线 = M_GT 外接矩形</text>
+      <text x="30" y="78" class="tm" fill="#15803d">绿虚线 = 裁剪线(+8px)</text>
+      <rect x="118" y="120" width="64" height="62" fill="none" stroke="#15803d" stroke-width="1.7" stroke-dasharray="5 4"/>
+      <rect x="126" y="128" width="48" height="46" class="dashb"/>
+      <path d="M146,131 C160,128 172,137 173,150 C174,165 163,174 149,174 C135,174 126,164 128,151 C130,140 136,133 146,131 Z" class="defect"/>
+      <path d="M150,141 C157,139 163,144 163,151 C163,159 157,163 150,163 C143,163 139,158 141,150 C142,145 145,142 150,141 Z" class="defectd"/>
+      <text x="186" y="148" class="tm">外接框 40×60</text>
+      <text x="150" y="190" text-anchor="middle" class="tm">缺陷</text>
+      <text x="145" y="282" text-anchor="middle" class="tb">512×512 工作画布(只是舞台,不整张落盘)</text>
+
+      <path d="M 275,150 L 320,150" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
+      <text x="297" y="134" text-anchor="middle" class="tm">紧包裁剪</text>
+
+      <rect x="345" y="45" width="130" height="95" rx="5" class="metal"/>
+      <path d="M410,72 C425,69 437,78 438,92 C439,106 428,114 414,114 C400,114 392,104 394,91 C396,80 401,74 410,72 Z" class="defect"/>
+      <path d="M414,82 C421,80 427,85 427,92 C427,100 421,104 414,104 C407,104 403,98 405,91 C406,86 409,83 414,82 Z" class="defectd"/>
+      <line x1="410" y1="49" x2="410" y2="68" stroke="#8a8477" stroke-width="1.2"/>
+      <text x="424" y="60" class="tm">8px</text>
+      <line x1="349" y1="92" x2="389" y2="92" stroke="#8a8477" stroke-width="1.2"/>
+      <text x="360" y="86" class="tm">8px</text>
+      <text x="492" y="62" class="tb">{序号}.png · 内容图</text>
+      <text x="492" y="82" class="t">裁自 P_final(画好缺陷的图)</text>
+      <text x="492" y="100" class="t">缺陷 + 8px 金属边距</text>
+
+      <line x1="410" y1="142" x2="410" y2="168" stroke="#9aa2b1" stroke-width="1" stroke-dasharray="2 3"/>
+      <text x="422" y="159" class="t">同尺寸 · 逐像素对应</text>
+
+      <rect x="345" y="170" width="130" height="95" rx="5" fill="#111"/>
+      <path d="M410,197 C425,194 437,203 438,217 C439,231 428,239 414,239 C400,239 392,229 394,216 C396,205 401,199 410,197 Z" fill="#fff"/>
+      <text x="492" y="187" class="tb">{序号}_mask.png · 标记图</text>
+      <text x="492" y="207" class="t">裁自 M_GT 掩码</text>
+      <text x="492" y="225" class="t">白 = 缺陷 · 黑 = 背景</text>
+
+      <text x="345" y="302" text-anchor="middle" class="tm">尺寸算例:外接框 40×60 → 小图 =(40+8×2)×(60+8×2)= 56×76;两张图都是 56×76</text>
+    </svg>
+    <figcaption>紧包裁剪:按 M_GT 外接矩形(蓝虚线)向外留 8px 得裁剪线(绿虚线),从 512 画布上裁下小图。{序号}.png 裁自 P_final,是真实画面;{序号}_mask.png 裁自 M_GT,是黑白标记——两图同尺寸、逐像素对应(注意掩码图是纯二值,没有浓淡核心)。</figcaption>
+  </figure>
+
+  <div class="tscroll">
+  <table class="tbl">
+    <tr><th></th><th>{序号}.png(内容图)</th><th>{序号}_mask.png(标记图)</th></tr>
+    <tr><td><b>裁自</b></td><td>P_final(画好缺陷的图)</td><td>M_GT 掩码(差分抠出的精准掩码)</td></tr>
+    <tr><td><b>内容</b></td><td>真实画面:缺陷 + 四周 8px 金属背景</td><td>黑白二值:白 = 缺陷,黑 = 背景</td></tr>
+    <tr><td><b>尺寸关系</b></td><td colspan="2" style="text-align:center"><b>完全相等</b>,同坐标系、逐像素一一对应——第 9 章 ④抹平背景、⑤泊松回写与打标签全靠这个对应</td></tr>
+  </table>
+  </div>
+  <div class="co why">
+    <span class="tag">🎯 为什么四周要留 8px 边距?</span>
+    <p>下游 train 仓库做泊松融合前要把掩码<b>外扩 5~7px</b>(详见第 9 章第 ⑤ 阶段)。如果小图贴着缺陷边裁,外扩时就没有背景像素可用。四周留 <span class="kn">8px</span> 边距,正好与下游的外扩 5~7px <b>遥相呼应</b>——保证外扩时有充足的背景余量。</p>
+  </div>
+  <p class="fnote">验收材料缓存在 <code class="inl">.tmp/.../3_preview/</code>:四联拼图「原底图 | 生成图 | 差分热力 | 最终掩码」,人工抽查合成质量就看它。</p>
+</section>
+
+<!-- ================= 第 9 章 ================= -->
+<section id="masklife">
+  <div class="chap"><span class="chapno">第 9 章</span><h2>掩码的一生:从人工标注到训练标签的完整闭环</h2></div>
+  <div class="chapref">对应原文 §四.0「从 0 到 1 轮廓(Mask)全生命周期操作时间线(速查表)」</div>
+
+  <p>这是全文技术含量最高的一节。<b>掩码(缺陷轮廓)</b>从人工画出来的那一刻起,一路经历变身,直到变成训练标签。原文用一句话概括它的一生:</p>
+  <div class="co plain">
+    <span class="tag">💡 一句话的一生</span>
+    <p><b>紧贴标注 → 外扩留过渡带 → 差分收紧提纯 → 落盘留余量 → 内存抹平背景 → 外扩送入泊松 → 按原掩码柔边回写并打标签</b></p>
+    <p>翻译:先贴身画(<span class="kn">0px</span>)→ 为了教 AI 和给 AI 留缓冲,胖一圈(<span class="kn">+8px</span>)→ 画完后靠差分把虚胖瘦回去(收紧成 M_GT)→ 存盘时四周留余量(<span class="kn">+8px</span> 边距)→ 进 train 后先把素材背景抹干净 → 送进泊松前又胖一圈(<span class="kn">+5~7px</span>,防被内部腐蚀吃掉)→ 但写回底图和打标签都只认<b>没胖过的原掩码</b>(柔边 <span class="kn">m_float</span>)。</p>
+  </div>
+
+  <div class="tl">
+    <div class="tli" data-n="①">
+      <div class="tlhead"><b>人工标注</b><code>define_masks · 标注 .bmp.tmp</code></div>
+      <div class="tlcard">
+        <p><b>做了什么:</b>紧贴真实缺陷边缘画多边形,<b>不外扩(<span class="kn">0px</span>)</b>。</p>
+        <p><b>为什么:</b>确立最原始、最老实的真实缺陷几何边界 M_raw——后面一切变形都以它为基准。</p>
+        <div class="minifigs">
+          <div class="minifig">
+            <svg viewBox="0 0 150 105" role="img" aria-label="阶段一:多边形紧贴缺陷边缘">
+              <rect x="5" y="5" width="140" height="95" rx="5" class="metal"/>
+              <path d="M56,32 C70,27 84,35 86,50 C88,66 76,77 61,77 C46,77 37,66 39,51 C40,40 46,34 56,32 Z" class="defect"/>
+              <path d="M56,32 C70,27 84,35 86,50 C88,66 76,77 61,77 C46,77 37,66 39,51 C40,40 46,34 56,32 Z" class="dasho"/>
+              <text x="75" y="95" text-anchor="middle" class="tm">紧贴边缘 · 0px 不外扩</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tli" data-n="②">
+      <div class="tlhead"><b>LoRA 切片(一分为二暂存)</b><code>synth_assets · Step 1 &amp; 2</code></div>
+      <div class="tlcard">
+        <p><b>做了什么:</b>在 512×512 切片上,同一条轮廓拆成<b>两份</b>、暂存 <code class="inl">.tmp/1_crops/</code>:</p>
+        <ul>
+          <li><b>原多边形直接转二值图</b> → 存 <code class="inl">.tmp/.../templates/</code>(<b>0px</b>,保持原样;Step 2 训练成功后随 LoRA 转正进 <code class="inl">models/</code>);</li>
+          <li><b>训练权重图</b> → 顺着轮廓<b>外扩 <span class="kn">+8px</span></b>:核心 <span class="kn">1.0</span>、外扩环带 <span class="kn">1.0→0.4</span>、外部 <span class="kn">0</span>(即第 5 章的三区权重图)。</li>
+        </ul>
+        <p><b>为什么:</b>存 templates/ 是为了<b>保留真实缺陷的原始骨架</b>(给 Step 3 当变形底坯);训练权重外扩 +8px 是为了让 LoRA <b>学会缺陷边缘与周围金属的过渡衔接</b>。</p>
+        <div class="minifigs">
+          <div class="minifig">
+            <svg viewBox="0 0 150 105" role="img" aria-label="阶段二之一:原始轮廓转二值模板,零外扩">
+              <rect x="5" y="5" width="140" height="95" rx="5" fill="#ffffff" stroke="#d8d2c0"/>
+              <path d="M56,32 C70,27 84,35 86,50 C88,66 76,77 61,77 C46,77 37,66 39,51 C40,40 46,34 56,32 Z" fill="#111"/>
+              <text x="75" y="95" text-anchor="middle" class="tm">templates/ · 0px 原样骨架</text>
+            </svg>
+          </div>
+          <div class="minifig">
+            <svg viewBox="0 0 150 105" role="img" aria-label="阶段二之二:训练权重图外扩8像素,三区权重">
+              <rect x="5" y="5" width="140" height="95" rx="5" class="metal"/>
+              <path d="M50,25 C68,19 85,29 88,47 C91,66 77,80 60,80 C43,80 33,67 35,50 C37,37 41,28 50,25 Z" class="ringg"/>
+              <path d="M56,32 C70,27 84,35 86,50 C88,66 76,77 61,77 C46,77 37,66 39,51 C40,40 46,34 56,32 Z" class="defect"/>
+              <text x="45" y="20" class="tm" fill="#b45309">1.0</text>
+              <text x="92" y="62" class="tm" fill="#b45309">1.0→0.4</text>
+              <text x="115" y="22" class="tm">0</text>
+              <text x="75" y="100" text-anchor="middle" class="tm">训练权重图 · +8px</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tli" data-n="③">
+      <div class="tlhead"><b>合成重绘与裁剪落盘</b><code>synth_assets · Step 3 &amp; 4</code></div>
+      <div class="tlcard">
+        <p><b>做了什么(三个时刻):</b></p>
+        <ul>
+          <li><b>重绘前</b>:取 <code class="inl">models/.../templates/</code> 的轮廓做弹性变形,再<b>外扩 <span class="kn">+8px</span></b> 得粗框 M_local,交给 AI 画缺陷;</li>
+          <li><b>重绘后</b>:前后相减(<span class="kn">|P_final − P_clean|</span>)按底噪倍数,把掩码<b>收紧回真实长出的缺陷边缘</b> M_GT——它就是落盘的 <code class="inl">*_mask.png</code>;</li>
+          <li><b>裁小图落盘</b>:按 M_GT 外接矩形<b>向外留 <span class="kn">+8px</span> 边距</b>,裁出 <code class="inl">*.png</code> 与 <code class="inl">*_mask.png</code>。</li>
+        </ul>
+        <p><b>为什么:</b>重绘前扩 +8px 是给 AI 留融合缓冲;重绘后差分收紧是为了<b>剥离被 AI 填成正常金属的边框</b>(虚胖部分差值≈0,自动消失);裁小图留 +8px 是让 <code class="inl">*_mask.png</code> 四周有一圈金属背景余量,<b>供下游泊松外扩使用</b>。</p>
+        <div class="minifigs">
+          <div class="minifig">
+            <svg viewBox="0 0 150 105" role="img" aria-label="阶段三之一:变形轮廓外扩8像素成为粗框">
+              <rect x="5" y="5" width="140" height="95" rx="5" class="metal"/>
+              <path d="M48,24 C68,17 88,28 91,48 C94,69 78,84 59,84 C40,84 29,69 32,49 C34,35 39,27 48,24 Z" class="ringg"/>
+              <path d="M56,32 C70,27 84,35 86,50 C88,66 76,77 61,77 C46,77 37,66 39,51 C40,40 46,34 56,32 Z" class="defect"/>
+              <text x="75" y="100" text-anchor="middle" class="tm">粗框 M_local = 变形 + 8px</text>
+            </svg>
+          </div>
+          <div class="minifig">
+            <svg viewBox="0 0 150 105" role="img" aria-label="阶段三之二:差分收紧回真实缺陷边缘">
+              <rect x="5" y="5" width="140" height="95" rx="5" fill="#171310"/>
+              <path d="M50,25 C68,19 85,29 88,47 C91,66 77,80 60,80 C43,80 33,67 35,50 C37,37 41,28 50,25 Z" fill="#3a332b"/>
+              <path d="M59,40 C68,38 75,44 76,52 C77,62 70,68 62,68 C54,68 49,62 50,54 C51,47 54,42 59,40 Z" fill="#fde047"/>
+              <text x="75" y="95" text-anchor="middle" class="tm" fill="#fde047">差分收紧 → M_GT(精准掩码)</text>
+            </svg>
+          </div>
+          <div class="minifig">
+            <svg viewBox="0 0 150 105" role="img" aria-label="阶段三之三:外接矩形加8像素边距裁小图">
+              <rect x="5" y="5" width="140" height="95" rx="5" class="metal"/>
+              <rect x="38" y="22" width="60" height="60" class="dashb"/>
+              <path d="M59,40 C68,38 75,44 76,52 C77,62 70,68 62,68 C54,68 49,62 50,54 C51,47 54,42 59,40 Z" class="defect"/>
+              <line x1="38" y1="16" x2="98" y2="16" stroke="#8a8477"/><text x="68" y="12" text-anchor="middle" class="tm">+8px 余量</text>
+              <text x="75" y="98" text-anchor="middle" class="tm">外接框 + 8px 边距裁小图</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tli" data-n="④">
+      <div class="tlhead"><b>训练加载与旋转</b><code>train · assets.py + dataset.py</code></div>
+      <div class="tlcard">
+        <p><b>做了什么:</b></p>
+        <ul>
+          <li><b>内存抹平背景</b>:读取小图配对进内存时,先把 <b>~mask 区域(掩码外)</b>填平为<b>外圈背景中值</b>(一圈干净的平均色);若 mask 贴着小图边缘,自动向四周<b>补 <span class="kn">1px</span> 背景边</b>;</li>
+          <li><b>随机缩放与旋转</b>:图像用<b>双线性插值</b>;mask 经插值 + <b><span class="kn">1px</span> 高斯柔化</b>,得到 0~1 的浮点掩码 <b>m_float</b>。</li>
+        </ul>
+        <p><b>为什么:</b>先抹平 ~mask 背景,防止素材原图里的<u>异物或条纹</u>被带进新底图;补 1px 边是防止 <span class="kn">0~360°</span> 随机旋转时<b>边界复制拉出三角伪影</b>(旋转算法在图边缘没像素可取时会复制边上一行,斜着旋转就拉出难看的三角条纹)。</p>
+        <div class="minifigs">
+          <div class="minifig">
+            <svg viewBox="0 0 150 105" role="img" aria-label="阶段四之一:掩码外区域可能有异物条纹">
+              <rect x="5" y="5" width="140" height="95" rx="5" class="metal"/>
+              <path d="M59,40 C68,38 75,44 76,52 C77,62 70,68 62,68 C54,68 49,62 50,54 C51,47 54,42 59,40 Z" class="defect"/>
+              <circle cx="120" cy="25" r="3.5" fill="#57534e"/>
+              <path d="M20,80 q12,-6 24,0 t24,0 t24,0" stroke="#57534e" fill="none" stroke-width="2"/>
+              <text x="75" y="100" text-anchor="middle" class="tm">素材外圈可能藏异物/条纹</text>
+            </svg>
+          </div>
+          <div class="minifig">
+            <svg viewBox="0 0 150 105" role="img" aria-label="阶段四之二:掩码外填成背景中值,干净了">
+              <rect x="5" y="5" width="140" height="95" rx="5" fill="#d2cfc7"/>
+              <path d="M59,40 C68,38 75,44 76,52 C77,62 70,68 62,68 C54,68 49,62 50,54 C51,47 54,42 59,40 Z" class="defect"/>
+              <text x="75" y="100" text-anchor="middle" class="tm">~mask 填外圈背景中值 → 干净</text>
+            </svg>
+          </div>
+          <div class="minifig">
+            <svg viewBox="0 0 150 105" role="img" aria-label="阶段四之三:随机旋转与浮点掩码">
+              <rect x="25" y="15" width="100" height="80" rx="5" class="metal"/>
+              <path d="M59,40 C68,38 75,44 76,52 C77,62 70,68 62,68 C54,68 49,62 50,54 C51,47 54,42 59,40 Z" class="defect" transform="rotate(-28 68 55)"/>
+              <path d="M104,50 a38,38 0 1,1 -12,-27" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="url(#ah1)"/>
+              <text x="75" y="102" text-anchor="middle" class="tm">随机旋转 → m_float 软边</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tli" data-n="⑤">
+      <div class="tlhead"><b>泊松贴入与打标签</b><code>train · paste_poisson</code></div>
+      <div class="tlcard">
+        <p><b>做了什么(严格三步):</b></p>
+        <ol>
+          <li><b>掩码外扩送泊松</b>:把 <span class="kn">m = (m_float &gt; 0.4)</span> 二值化后<b>外扩 <span class="kn">+5~7px</span></b>(贴边则自动补边),送入 <code class="inl">cv2.seamlessClone(NORMAL_CLONE)</code> 解泊松方程;</li>
+          <li><b>原掩码柔边回写</b>:仅按<b>未外扩</b>的 <span class="kn">m_float</span>(1px 柔边),把泊松调光后的缺陷<b>软混合</b>写回底图;</li>
+          <li><b>打训练标签</b>:按<b>未外扩</b>的 <span class="kn">m_float &gt; 0.25</span> 标为缺陷正样本 <span class="kn">1</span>。</li>
+        </ol>
+        <p><b>为什么(对应三步):</b></p>
+        <ul>
+          <li>OpenCV 泊松内部会<b>强行向内腐蚀 <span class="kn">4px</span></b>——不先外扩 5~7px,缺陷最外圈的梯度细节就被"吃"掉了;</li>
+          <li>按<b>未外扩</b>的 m_float 回写,保证缺陷本体以外<b> 100% 不破坏底图原有纹理</b>(外扩那圈只是给泊松方程当"工作间",不是成品的一部分);</li>
+          <li>监督标签收紧到 <span class="kn">m_float &gt; 0.25</span>,避免模型把外扩背景学成缺陷、导致<u>预测框发胖</u>。</li>
+        </ul>
+        <div class="minifigs">
+          <div class="minifig">
+            <svg viewBox="0 0 150 105" role="img" aria-label="阶段五之一:掩码二值化并外扩5到7像素送泊松">
+              <rect x="5" y="5" width="140" height="95" rx="5" class="metal"/>
+              <path d="M52,28 C68,22 84,32 86,49 C88,66 76,78 60,78 C44,78 34,65 36,49 C38,36 43,31 52,28 Z" fill="#3b82f6" opacity=".38"/>
+              <path d="M59,40 C68,38 75,44 76,52 C77,62 70,68 62,68 C54,68 49,62 50,54 C51,47 54,42 59,40 Z" class="defect"/>
+              <text x="75" y="98" text-anchor="middle" class="tm">外扩 +5~7px → 送泊松</text>
+            </svg>
+          </div>
+          <div class="minifig">
+            <svg viewBox="0 0 150 105" role="img" aria-label="阶段五之二:按未外扩的柔边掩码软混合写回">
+              <rect x="5" y="5" width="140" height="95" rx="5" class="metal"/>
+              <path d="M59,40 C68,38 75,44 76,52 C77,62 70,68 62,68 C54,68 49,62 50,54 C51,47 54,42 59,40 Z" class="defect" opacity=".85"/>
+              <path d="M59,40 C68,38 75,44 76,52 C77,62 70,68 62,68 C54,68 49,62 50,54 C51,47 54,42 59,40 Z" fill="none" stroke="#f59e0b" stroke-width="5" opacity=".45"/>
+              <text x="75" y="98" text-anchor="middle" class="tm">按原 m_float 柔边回写</text>
+            </svg>
+          </div>
+          <div class="minifig">
+            <svg viewBox="0 0 150 105" role="img" aria-label="阶段五之三:m_float大于0.25处标为正样本1">
+              <rect x="5" y="5" width="140" height="95" rx="5" fill="#0d0c0a"/>
+              <path d="M59,40 C68,38 75,44 76,52 C77,62 70,68 62,68 C54,68 49,62 50,54 C51,47 54,42 59,40 Z" fill="#ffffff"/>
+              <text x="75" y="94" text-anchor="middle" class="tm" fill="#e5e7eb">标签:m_float &gt; 0.25 → 1</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tli" data-n="⑥">
+      <div class="tlhead"><b>底图已有真缺陷屏蔽</b><code>train · _annot_tile</code></div>
+      <div class="tlcard">
+        <p><b>做了什么:</b>底图 <code class="inl">.bmp.tmp</code> 上已有的真缺陷多边形,向四周<b>外扩 <span class="kn">+4px</span></b>(常量 <span class="kn">ANN_DILATE = 4</span>),标为 <span class="kn">255</span>(忽略区,<b>不计 Loss</b>)。</p>
+        <p><b>为什么:</b>人工标注紧贴缺陷,但缺陷边缘往外还有几像素<b>过渡带</b>(半黑不白的像素)。不设忽略区的话,这些过渡像素会被当成"正常背景 0"教给模型,把模型教糊涂;外扩 +4px 设为忽略区(不奖不罚),模型就不用对这条模糊地带表态。</p>
+        <div class="minifigs">
+          <div class="minifig">
+            <svg viewBox="0 0 150 105" role="img" aria-label="阶段六:真缺陷多边形外扩4像素标为255忽略区">
+              <rect x="5" y="5" width="140" height="95" rx="5" class="metal"/>
+              <path d="M54,30 C68,25 82,33 84,48 C86,63 75,74 61,74 C47,74 38,63 40,49 C41,38 46,33 54,30 Z" class="ignore"/>
+              <path d="M59,40 C68,38 75,44 76,52 C77,62 70,68 62,68 C54,68 49,62 50,54 C51,47 54,42 59,40 Z" class="defect"/>
+              <text x="75" y="94" text-anchor="middle" class="tm">真缺陷 +4px → 255 忽略区</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 第 10 章 ================= -->
+<section id="designqa">
+  <div class="chap"><span class="chapno">第 10 章</span><h2>设计问答:8 个"为什么非这么设计不可"</h2></div>
+  <div class="chapref">对应原文 §四.1「synth_assets 各阶段核心设计说明」——每行设计的"怎么做 + 为什么"全部收录</div>
+
+  <div class="co plain">
+    <span class="tag">💡 大白话</span>
+    <p>前面章节边讲边解释过一部分"为什么",本章把原文设计表里的 8 个设计决策<u>原原本本</u>集中成问答,方便你检验自己是否真看懂了。每条都能在对应章节找到展开。</p>
+  </div>
+
+  <h3>Q1 · 为什么顺着多边形轮廓外扩 8px,而不是让 AI 在原标注框里画?<small style="font-weight:400">(Step 1)</small></h3>
+  <p><b>怎么做:</b>将 <code class="inl">.tmp</code> 中的缺陷轮廓多边形向四周形态学膨胀 8px,形成"内部核心区 + 8px 缓冲环带"。</p>
+  <p><b>为什么:</b>人工标注通常贴着缺陷边缘(或略带几像素背景)。如果只让 AI 在原框内画画,AI 没空间画缺陷边缘的<b>立体暗影、毛刺或明暗过渡</b>,画出来像剪纸。顺着轮廓外扩 8px 给 AI 留出过渡带;且因为是<u>顺着轮廓</u>扩(非矩形框),长划痕也只是两侧加宽 8px,<b>不会框入多余背景</b>。</p>
+
+  <h3>Q2 · 为什么所有图统一固定 512×512 切片?<small style="font-weight:400">(Step 1)</small></h3>
+  <p><b>怎么做:</b>所有训练与重绘统一按 512×512(1:1 原生像素,不缩放)裁剪。</p>
+  <p><b>为什么(三条):</b>① 保持 1:1 工业相机原生锐度,不因缩放模糊细微缺陷;② 避免多尺寸分桶导致训练 Batch 无法对齐和显存碎片化;③ 与下游 train 仓库的切块尺度(512)完全一致。</p>
+
+  <h3>Q3 · 为什么用三区软权重损失,还非要"训练成功才转正"?<small style="font-weight:400">(Step 2)</small></h3>
+  <p><b>怎么做:</b>核心区权重 1.0、外扩 8px 缓冲带权重 1.0→0.4、框外权重 0.0;仅当 LoRA 训练成功完成时,才把权重与 <code class="inl">.tmp/1_crops/templates/</code> 一起写入 <code class="inl">models/</code>。</p>
+  <p><b>为什么:</b>① 框外权重设为 0,逼迫 AI 把 <b>100% 算力</b>用来学"缺陷长什么样"及"缓冲带怎么和周围金属衔接";② 训练未成功前 models/ 目录保持绝对干净,只有训练成功结束才一次性产出完整可用的模型包(权重 + 形态模板 + 元数据)。</p>
+
+  <h3>Q4 · 为什么新形状要拿真实模板做弹性变形,而不是随便画?<small style="font-weight:400">(Step 3)</small></h3>
+  <p><b>怎么做:</b>取真实缺陷轮廓做任意角度旋转、缩放,并叠加二维平滑随机位移场扭曲轮廓,再外扩 8px 作为重绘框。</p>
+  <p><b>为什么:</b>既保留该类缺陷真实的<b>物理形态规律</b>(砂眼的凹凸锯齿感、划痕的细长弧度),又保证生成的几百个新缺陷<b>没有两个形状完全雷同</b>。</p>
+
+  <h3>Q5 · 为什么底图必须从合法分区里裁,且框外零篡改?<small style="font-weight:400">(Step 3)</small></h3>
+  <p><b>怎么做:</b>只在点位 <code class="inl">{基准图名}.json</code> 允许的检测分区(如「加工面」)内取干净底图,重绘后仅更新粗框内部像素。</p>
+  <p><b>为什么:</b>保证生成的缺陷底座纹理就是该产品<b>真实待检面的材质纹理</b>;且重绘框外 <b>100% 像素零改动</b>,为下一步"前后相减自动抠图"提供<b>绝对干净的基准</b>。</p>
+
+  <h3>Q6 · 为什么要前后相减(差分提纯)?<small style="font-weight:400">(Step 4)</small></h3>
+  <p><b>怎么做:</b>拿【画完缺陷的图 P_final】减去【画之前的干净底图 P_clean】。</p>
+  <p><b>为什么:</b>给 AI 的重绘框是带缓冲带的宽框(例如 20px 宽),AI 在中间画了 5px 宽的真划痕,两边 15px 被 AI 补成了正常金属。前后相减后,<b>补成正常金属的地方差值接近 0,直接抵消归零;只有真正长出缺陷的那 5px 差值巨大</b>——从而无需人工抠图,全自动提纯出精准的 <code class="inl">_mask.png</code>。</p>
+
+  <h3>Q7 · 为什么按"背景底噪倍数"双阈值卡线,而不用大津法?<small style="font-weight:400">(Step 4)</small></h3>
+  <p><b>怎么做:</b>先算框外正常金属的底噪波动 σ;规定差值 &gt; 3.5σ 为缺陷核心,再把核心旁 &gt; 1.8σ 的相连像素吸纳进掩码。</p>
+  <p><b>为什么:</b>传统 Otsu(大津法)会强行把画面按比例分两半,遇到微小缺陷(如 3×3 小砂眼)会把整圈背景噪点误判为缺陷。按<b>背景底噪倍数</b>卡线,无论缺陷多大或多小,只要真画出来了就能精准抠出;若全框差值都未超过 3.5σ,还能自动识别为生成失败的废片并直接淘汰。</p>
+
+  <h3>Q8 · 为什么按精准掩码外接框(+8px 边距)裁成小图?<small style="font-weight:400">(Step 4)</small></h3>
+  <p><b>怎么做:</b>在 512×512 上抠出精准掩码后,按掩码外接矩形(四周留 8px 边距)裁成小图存入 <code class="inl">assets/{类型}/synth/</code>。</p>
+  <p><b>为什么:</b>下游 train 仓库需要<b>紧包缺陷</b>的小图配对;四周留 8px 边距与 train 泊松融合前外扩 5~7px <b>遥相呼应</b>,确保外扩时有充足的背景余量。</p>
+</section>
+
+<!-- ================= 第 11 章 ================= -->
+<section id="commands">
+  <div class="chap"><span class="chapno">第 11 章</span><h2>常用命令:四条命令走天下</h2></div>
+  <div class="chapref">对应原文 §五「常用命令设计(与 train 保持一致的极简风格)」</div>
+
+  <div class="cmdcard">
+    <h4>场景 1 · 一键跑完整流程</h4>
+    <div class="cmdline"><span class="pr">$ </span>uv run synth --product HT12</div>
+    <p style="font-size:14.5px;margin:6px 0">切图 → 训练 LoRA → 生成合成素材 → 差分抠图入库,四步一口气跑完。<b>参数解释:</b><code class="inl">uv run</code> = 用 uv 启动程序;<code class="inl">synth</code> = 本仓库的 CLI 程序名;<code class="inl">--product HT12</code> = 指定产品代号。</p>
+  </div>
+
+  <div class="cmdcard">
+    <h4>场景 2 · 只针对某一种缺陷合成</h4>
+    <div class="cmdline"><span class="pr">$ </span>uv run synth --product HT12 --defect 砂眼 --count 200</div>
+    <p style="font-size:14.5px;margin:6px 0">只跑「砂眼」这一类。<code class="inl">--defect 砂眼</code> = 指定缺陷类型;<code class="inl">--count 200</code> = 生成 200 个新素材。</p>
+  </div>
+
+  <div class="cmdcard">
+    <h4>场景 3 · 已有训练好的 LoRA,跳过训练直接裂变</h4>
+    <div class="cmdline"><span class="pr">$ </span>uv run synth --product HT12 --defect 砂眼 --skip_train --count 300</div>
+    <p style="font-size:14.5px;margin:6px 0">前提:<code class="inl">models/HT12/砂眼/</code> 下已经有训练成功的 LoRA 档案。<code class="inl">--skip_train</code> = 跳过 Step 2 训练,直接加载现成权重开始裂变——这正是"训练一次、秒级生图"的复用姿势,这次直接生成 300 个。</p>
+  </div>
+
+  <div class="cmdcard">
+    <h4>场景 4 · 只跑 Step 1 切图预处理(笔记本就能跑)</h4>
+    <div class="cmdline"><span class="pr">$ </span>uv run synth --product HT12 --step prep</div>
+    <p style="font-size:14.5px;margin:6px 0">只执行 Step 1,不碰训练。<b>可以在开发笔记本上跑</b>,然后去 <code class="inl">.tmp/HT12/砂眼/1_crops/</code> 下检查<b>切图预览</b>与<b>候选模板</b>——切得好不好,先看草稿再决定要不要上服务器训练。</p>
+  </div>
+
+  <div class="co warn">
+    <span class="tag">⚠️ 记住分工</span>
+    <p>Step 1、Step 4 轻量,笔记本可跑;Step 2(训练)、Step 3(生图)要<b>双 A40 服务器</b>。所以常见工作流是:笔记本上 <code class="inl">--step prep</code> 检查切片 → 满意了上服务器跑全流程。</p>
+  </div>
+</section>
+
+<!-- ================= 第 12 章 ================= -->
+<section id="configs">
+  <div class="chap"><span class="chapno">第 12 章</span><h2>配置文件逐字段讲解</h2></div>
+  <div class="chapref">对应原文 §六「代码生成 .json 与人工维护 .jsonc 格式定义」</div>
+
+  <h3>12.1 config/app_config.jsonc(人工维护 · 支持注释)</h3>
+  <p>全流水线的"总设置面板"。原文文件长这样(<span class="cm" style="color:#4e7a4e">// 注释是它相比 .json 的超能力</span>):</p>
+  <pre class="code">{
+  <span class="cm">// 切块与重绘分辨率 (固定 512×512, 1:1 原生像素不缩放)</span>
+  "tile_size": 512,
+  <span class="cm">// 缺陷多边形轮廓固定外扩像素数 (缓冲带宽度)</span>
+  "mask_dilate_px": 8,
+  <span class="cm">// 基座模型路径或 HuggingFace ID</span>
+  "base_model": "black-forest-labs/FLUX.1-Fill-dev",
+  <span class="cm">// LoRA 训练默认参数 (双 A40 bf16)</span>
+  "lora_rank": 32,
+  "train_steps": 1000,
+  "learning_rate": 1e-4,
+  <span class="cm">// 每类缺陷默认合成目标数量</span>
+  "synth_count": 200,
+  <span class="cm">// 差分抠图信噪比阈值: 核心区高阈值 / 边缘吸附低阈值</span>
+  "snr_high": 3.5,
+  "snr_low": 1.8,
+  <span class="cm">// 导出小图四周保留边距 (供下游 train 泊松外扩 5~7px 使用)</span>
+  "export_pad_px": 8,
+  "seed": 20260927
+}</pre>
+
+  <div class="tscroll">
+  <table class="tbl">
+    <tr><th>字段</th><th>值</th><th>大白话解释</th></tr>
+    <tr><td><code class="inl">tile_size</code></td><td><span class="kn">512</span></td><td>切块与重绘的统一分辨率。512×512、1:1 原生像素、绝不缩放(原因见第 5 章 Q2)。</td></tr>
+    <tr><td><code class="inl">mask_dilate_px</code></td><td><span class="kn">8</span></td><td>缺陷轮廓固定外扩的像素数,即"缓冲带宽度"。全文反复出现的那个 8px 就是它。</td></tr>
+    <tr><td><code class="inl">base_model</code></td><td><code class="inl">FLUX.1-Fill-dev</code></td><td>基座大模型的路径或 HuggingFace ID——AI 画师的"本体",Step 2 训练、Step 3 生图都基于它。</td></tr>
+    <tr><td><code class="inl">lora_rank</code></td><td><span class="kn">32</span></td><td>LoRA 的"记忆容量"。越大记得越细但文件越大、训练越慢,32 是平衡点。按双 A40 + bf16 的默认训练参数设定。</td></tr>
+    <tr><td><code class="inl">train_steps</code></td><td><span class="kn">1000</span></td><td>训练步数:把训练素材翻来覆去学多少轮迭代。1000 步对几十张图的专项学习足够。</td></tr>
+    <tr><td><code class="inl">learning_rate</code></td><td><span class="kn">1e-4</span></td><td>学习率 = 每步"拧旋钮"的幅度(1e-4 就是 0.0001)。步子太大会学崩、太小会学不动。</td></tr>
+    <tr><td><code class="inl">synth_count</code></td><td><span class="kn">200</span></td><td>每类缺陷默认要合成多少个新素材(命令行 <code class="inl">--count</code> 可覆盖它)。</td></tr>
+    <tr><td><code class="inl">snr_high</code></td><td><span class="kn">3.5</span></td><td>差分抠图的<b>核心区高阈值</b>:差值超过底噪的 3.5 倍才认定为缺陷核心。</td></tr>
+    <tr><td><code class="inl">snr_low</code></td><td><span class="kn">1.8</span></td><td><b>边缘吸附低阈值</b>:核心旁差值超 1.8 倍且相连的像素,吸进掩码当边缘。</td></tr>
+    <tr><td><code class="inl">export_pad_px</code></td><td><span class="kn">8</span></td><td>导出小图四周保留的边距。专门为下游 train 泊松外扩 5~7px 留的余粮。</td></tr>
+    <tr><td><code class="inl">seed</code></td><td><span class="kn">20260927</span></td><td>随机种子:固定它,同样配置每次跑出完全同样的结果,实验可复现、问题可排查。</td></tr>
+  </table>
+  </div>
+
+  <h3>12.2 models/{产品}/{缺陷类型}/manifest.json(代码生成 · 标准 JSON)</h3>
+  <p>训练成功时自动写下的"出厂铭牌",一个真实示例:</p>
+  <pre class="code">{
+  "product": "HT12",
+  "defect_class": "砂眼",
+  "trigger_token": "[DEF_HT12_砂眼]",
+  "tile_size": 512,
+  "mask_dilate_px": 8,
+  "num_real_samples": 38,
+  "num_templates": 38,
+  "lora_rank": 32,
+  "train_steps": 1000,
+  "area_stats": {
+    "min": 120,
+    "median": 650,
+    "max": 3200
+  }
+}</pre>
+
+  <div class="tscroll">
+  <table class="tbl">
+    <tr><th>字段</th><th>示例值</th><th>大白话解释</th></tr>
+    <tr><td><code class="inl">product</code></td><td><code class="inl">HT12</code></td><td>产品代号:这包资产是给哪个产品训的。</td></tr>
+    <tr><td><code class="inl">defect_class</code></td><td><code class="inl">砂眼</code></td><td>缺陷类型:这包资产专攻哪种病。</td></tr>
+    <tr><td><code class="inl">trigger_token</code></td><td><code class="inl">[DEF_HT12_砂眼]</code></td><td>触发词:生图时写上它,LoRA 才知道掏出"HT12 砂眼"的画法——像点名暗号。</td></tr>
+    <tr><td><code class="inl">tile_size</code></td><td><span class="kn">512</span></td><td>训练时用的切块分辨率(与配置一致,铭牌上再记一遍,防止以后配置改了说不清)。</td></tr>
+    <tr><td><code class="inl">mask_dilate_px</code></td><td><span class="kn">8</span></td><td>训练时的轮廓外扩量,同样照抄进铭牌。</td></tr>
+    <tr><td><code class="inl">num_real_samples</code></td><td><span class="kn">38</span></td><td>用了 38 张真实样本训练。</td></tr>
+    <tr><td><code class="inl">num_templates</code></td><td><span class="kn">38</span></td><td>转正了 38 个形态模板(每个真实缺陷一个)。</td></tr>
+    <tr><td><code class="inl">lora_rank</code> / <code class="inl">train_steps</code></td><td><span class="kn">32</span> / <span class="kn">1000</span></td><td>训练超参数存档:容量 32、训了 1000 步。</td></tr>
+    <tr><td><code class="inl">area_stats</code></td><td><span class="kn">120 / 650 / 3200</span></td><td>这批真实缺陷的面积统计(单位:像素):最小 120、中位数 650、最大 3200——一眼看出这病长多大。</td></tr>
+  </table>
+  </div>
+</section>
+
+<!-- ================= 第 13 章 ================= -->
+<section id="cheatsheet">
+  <div class="chap"><span class="chapno">第 13 章</span><h2>数字速查表:全文关键数字一网打尽</h2></div>
+  <div class="chapref">复习巩固 · 每个数字都在前文出现过,此处汇总备查</div>
+
+  <div class="tscroll">
+  <table class="tbl">
+    <tr><th>数字</th><th>出现在哪</th><th>一句话含义</th></tr>
+    <tr><td><span class="kn">0px</span></td><td>① 人工标注 / ② templates 模板</td><td>标注和模板都紧贴缺陷边缘,不外扩——保住最真实的原始骨架。</td></tr>
+    <tr><td><span class="kn">8px</span>(mask_dilate_px / export_pad_px)</td><td>Step 1 训练权重、Step 3 粗框、Step 4 导出边距</td><td>贯穿全文的"缓冲带宽度":给 AI 留过渡、落盘给下游泊松留余量。</td></tr>
+    <tr><td><span class="kn">1.0 / 1.0→0.4 / 0.0</span></td><td>Step 1 三区权重图、Step 2 加权损失</td><td>核心必学、缓冲带渐松、背景不管。</td></tr>
+    <tr><td><span class="kn">512×512</span>(tile_size)</td><td>Step 1 切块、Step 3 重绘</td><td>统一 1:1 原生像素:保锐度、防显存碎片、对齐下游 train。</td></tr>
+    <tr><td><span class="kn">4px</span>(余弦羽化)</td><td>Step 3 羽化回贴</td><td>粗框边缘向内 4px 平滑过渡,框外 100% 保持原样。</td></tr>
+    <tr><td><span class="kn">3.5σ</span>(snr_high)</td><td>Step 4 差分卡线</td><td>差值超底噪 3.5 倍 → 缺陷核心;全框都超不过 → 判废片。</td></tr>
+    <tr><td><span class="kn">1.8σ</span>(snr_low)</td><td>Step 4 差分卡线</td><td>核心旁超 1.8 倍且相连的像素 → 吸附为缺陷边缘。</td></tr>
+    <tr><td><span class="kn">3.5</span>(峰值信噪比门槛)</td><td>Step 4 质量门控</td><td>缺陷不够醒目(峰信噪比 &lt; 3.5)或面积过小 → 废片重画。</td></tr>
+    <tr><td><span class="kn">4px</span>(泊松内部腐蚀)</td><td>train 泊松贴入</td><td>OpenCV seamlessClone 会向内吃 4px,所以送入前必须外扩。</td></tr>
+    <tr><td><span class="kn">+5~7px</span>(泊松外扩)</td><td>train 泊松贴入</td><td>m_float&gt;0.4 二值化后外扩这么多再解泊松,保住缺陷梯度。</td></tr>
+    <tr><td><span class="kn">&gt;0.4</span> / <span class="kn">&gt;0.25</span></td><td>train 泊松贴入与打标签</td><td>0.4:二值化送泊松的门限;0.25:算正样本标签的门限(更严,防预测框发胖)。</td></tr>
+    <tr><td><span class="kn">1px</span>(高斯柔化 / 背景补边)</td><td>train 训练加载</td><td>mask 插值后柔化 1px 得 m_float;mask 贴边就补 1px 背景防三角伪影。</td></tr>
+    <tr><td><span class="kn">+4px</span>(ANN_DILATE)</td><td>train 真缺陷屏蔽</td><td>底图已有标注外扩 4px 标 255 = 忽略区,不计 Loss。</td></tr>
+    <tr><td><span class="kn">255</span></td><td>train 忽略区</td><td>标签图里的特殊值:"这题跳过,不奖不罚"。</td></tr>
+    <tr><td><span class="kn">32 / 1000 / 1e-4</span></td><td>LoRA 训练参数</td><td>记忆容量 rank 32、训 1000 步、学习率 0.0001(双 A40 + bf16)。</td></tr>
+    <tr><td><span class="kn">200</span>(synth_count)</td><td>默认合成数量</td><td>每类缺陷默认裂变 200 个,命令行 --count 可改。</td></tr>
+    <tr><td><span class="kn">20260927</span>(seed)</td><td>全局随机种子</td><td>固定随机起点,保证结果可复现。</td></tr>
+    <tr><td><span class="kn">38 / 120 / 650 / 3200</span></td><td>manifest 示例</td><td>38 个真实样本与模板;缺陷面积最小 120、中位 650、最大 3200 像素。</td></tr>
+  </table>
+  </div>
+
+  <div class="co story">
+    <span class="tag">📖 一分钟复盘整个故事</span>
+    <p><b>切好菜</b>(Step 1:标注归类、外扩 8px 三区权重、512 切片)→ <b>教会徒弟</b>(Step 2:FLUX 外挂缺陷专属 LoRA,只考重点章节,成功才开档案柜)→ <b>徒弟炒菜</b>(Step 3:合法分区裁净布、模板揉橡皮泥变新形状、框内画缺陷、框外毫发不伤)→ <b>自动验货装盘</b>(Step 4:前后相减找不同、按底噪倍数卡线抠掩码、废片自动重画、留 8px 边距落盘)→ 素材进库,<b>train 仓库零修改拿来就训</b>。</p>
+    <p>掩码则走完它的一生:<b>贴身 0px → 学艺 +8px → 差分瘦回真身 → 落盘留 8px 余量 → 进 train 抹平背景、柔化成 m_float → 外扩 5~7px 送泊松(防被内部腐蚀 4px)→ 按原掩码柔边回写、0.25 门限打标签 → 老缺陷外扩 4px 设忽略</b>。闭环,齐活。</p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<button id="topBtn" aria-label="回到顶部" title="回到顶部">↑</button>
+
+<script>
+(function(){
+  var btn=document.getElementById('topBtn');
+  btn.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'});});
+  var links=[].slice.call(document.querySelectorAll('.sidebar a'));
+  var map={};
+  links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a;});
+  if('IntersectionObserver' in window){
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        if(e.isIntersecting){
+          links.forEach(function(l){l.classList.remove('on');});
+          var l=map[e.target.id]; if(l){l.classList.add('on');}
+        }
+      });
+    },{rootMargin:'-15% 0px -75% 0px'});
+    [].slice.call(document.querySelectorAll('main section[id]')).forEach(function(s){io.observe(s);});
+  }
+})();
+</script>
+</body>
+</html>

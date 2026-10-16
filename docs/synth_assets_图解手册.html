@@ -304,7 +304,7 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
     <div class="term"><b>.bmp 文件</b>一种不压缩的图片格式,工业相机常用。画质无损、细节一根汗毛都不丢,代价是文件比较大。</div>
     <div class="term"><b>掩码(Mask)</b>和原图同样大小的一张"透明胶片":白色的地方(值为 1)表示"这里是缺陷",黑色的地方(值为 0)表示"这里不是"。<b>像素级精准掩码</b>= 精确到每一个小方格的对错判定。</div>
     <div class="term"><b>二值图</b>只有两种值的图(0 和 1,或 0 和 255)。掩码、形态模板存的都是二值图,像"剪纸模板"。</div>
-    <div class="term"><b>多边形标注(.bmp.tmp)</b>人工沿着缺陷边缘点一圈点、连成一个多边形,存进与原图同名的 <code class="inl">.bmp.tmp</code> 文件里,每条标注带个标签(label):「砂眼」「划痕」或「排除」。</div>
+    <div class="term"><b>多边形标注(.bmp.tmp)</b>用标注工具「老表,标我.exe」沿着缺陷边缘点一圈点、连成一个多边形,存进与原图同名的 <code class="inl">.bmp.tmp</code> 文件里,每条标注带个标签(label):「砂眼」「划痕」或「排除」。</div>
     <div class="term"><b>外接矩形</b>恰好能把一个图形完整框住的最小正方向矩形。Step 4 落盘时按掩码的外接矩形来裁小图。</div>
     <div class="term"><b>底噪 σ(西格玛)</b>干净金属上亮度的微小随机波动——像安静教室里的呼吸声。σ 是这股波动的"幅度统计值"(标准差)。后面 "<span class="kn">3.5σ</span>" 的意思是:比呼吸声大 3.5 倍才算真动静。</div>
   </div>
@@ -760,6 +760,11 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
     </ol>
   </div>
 
+  <div class="co plain">
+    <span class="tag">💡 大白话:一图一掩码一缺陷</span>
+    <p>每张 512 切片只认<b>一个"主角"缺陷</b>——同图若还有别的缺陷被裁进框里,它在训练掩码里<b>权重置 0、像素抹平成正常金属</b>(当作不存在)。为什么这么较真?LoRA 一次只该学一个缺陷的画法,<b>放两个进来,它可能学会"一次画俩"</b>——主角光环必须独一份。</p>
+  </div>
+
   <h3>5.6 Step 1 的产物去哪?</h3>
   <p>训练切片、三区权重图、候选二值轮廓模板(<code class="inl">templates/</code>)、切图预览拼图——<b>全部写入 <code class="inl">.tmp/HT12/{缺陷类型}/1_crops/</code></b>,此时一个字节都不写 <code class="inl">models/</code>(正式档案柜必须等 Step 2 训练成功才开柜)。</p>
 </section>
@@ -1038,7 +1043,7 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
   <ul>
     <li><b>随机旋转 / 翻转 / 缩放</b>:换个朝向、镜像一下、放大缩小;</li>
     <li><b>弹性扭曲变形</b>:叠加一张二维平滑随机位移场,把轮廓推得歪歪扭扭又自然;</li>
-    <li>变形后的轮廓<b>再外扩 <span class="kn">8px</span></b>,得到重绘粗框 <b>M_local</b>。</li>
+    <li>变形后的轮廓经 <b>Halcon 单应对齐投射</b>(蒙版精准对位到当前底图坐标)后<b>再外扩 <span class="kn">8px</span></b>,得到重绘粗框 <b>M_local</b>——且其外接框必须 <b>100% 落在检测区内</b>(整框入区)。</li>
   </ul>
 
   <figure class="fig">
@@ -1073,6 +1078,11 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
   <div class="co why">
     <span class="tag">🎯 为什么要用真实模板"揉",而不是凭空随机画?</span>
     <p>直接随机画,形状可能根本不像这类缺陷。以真实轮廓为基底做弹性变形,既<b>保留该类缺陷的物理形态规律</b>(砂眼的凹凸锯齿感、划痕的细长弧度),又保证生成的几百个新缺陷<b>没有两个形状完全雷同</b>——多样性和真实性兼得。</p>
+  </div>
+
+  <div class="co plain">
+    <span class="tag">💡 大白话:印章先对位,再盖章</span>
+    <p>变形后的"印章"不是直接拍上去:先用 <b>Halcon 单应投射</b>把蒙版精准对位到当前底图坐标(与 train 工程对齐同款技术),并且<b>整个粗框都必须落在检测分区内</b>(整框入区)——这样落盘小图四周的 8px 边距才是 100% 纯金属,<b>绝不混入黑孔</b>等检测区外内容。</p>
   </div>
 
   <h3>7.3 AI 局部重绘:挂上 LoRA 开画</h3>
@@ -1435,10 +1445,10 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
 
   <div class="tl">
     <div class="tli" data-n="①">
-      <div class="tlhead"><b>人工标注</b><code>define_masks · 标注 .bmp.tmp</code></div>
+      <div class="tlhead"><b>人工标注</b><code>老表,标我.exe · 标注 .bmp.tmp</code></div>
       <div class="tlcard">
-        <p><b>做了什么:</b>紧贴真实缺陷边缘画多边形,<b>不外扩(<span class="kn">0px</span>)</b>。</p>
-        <p><b>为什么:</b>确立最原始、最老实的真实缺陷几何边界 M_raw——后面一切变形都以它为基准。</p>
+        <p><b>做了什么:</b>用标注工具「老表,标我.exe」紧贴真实缺陷边缘画多边形,<b>不外扩(<span class="kn">0px</span>)</b>。</p>
+        <p><b>为什么:</b>确立最原始、最老实的真实缺陷几何边界 M_raw——记在<b>原图原生坐标系</b>,天然零偏移,后面一切变形都以它为基准。</p>
         <div class="minifigs">
           <div class="minifig">
             <svg viewBox="0 0 150 105" role="img" aria-label="阶段一:多边形紧贴缺陷边缘">
@@ -1455,12 +1465,12 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
     <div class="tli" data-n="②">
       <div class="tlhead"><b>LoRA 切片(一分为二暂存)</b><code>synth_assets · Step 1 &amp; 2</code></div>
       <div class="tlcard">
-        <p><b>做了什么:</b>在 512×512 切片上,同一条轮廓拆成<b>两份</b>、暂存 <code class="inl">.tmp/1_crops/</code>:</p>
+        <p><b>做了什么:</b>在 512×512 切片上按<b>「一图一掩码一缺陷」</b>拆两份暂存 <code class="inl">.tmp/1_crops/</code>——每张切片只装<b>一个</b>缺陷:</p>
         <ul>
           <li><b>原多边形直接转二值图</b> → 存 <code class="inl">.tmp/.../templates/</code>(<b>0px</b>,保持原样;Step 2 训练成功后随 LoRA 转正进 <code class="inl">models/</code>);</li>
-          <li><b>训练权重图</b> → 顺着轮廓<b>外扩 <span class="kn">+8px</span></b>:核心 <span class="kn">1.0</span>、外扩环带 <span class="kn">1.0→0.4</span>、外部 <span class="kn">0</span>(即第 5 章的三区权重图)。</li>
+          <li><b>训练权重图</b> → 只给<b>当前这一个缺陷</b>顺轮廓<b>固定外扩 <span class="kn">+8px</span></b>:核心 <span class="kn">1.0</span>、环带 <span class="kn">1.0→0.4</span>、外部 <span class="kn">0</span>;<b>同块若带入相邻缺陷,其权重一律置 0、像素抹平成正常金属</b>(即第 5 章的三区权重图)。</li>
         </ul>
-        <p><b>为什么:</b>存 templates/ 是为了<b>保留真实缺陷的原始骨架</b>(给 Step 3 当变形底坯);训练权重外扩 +8px 是为了让 LoRA <b>学会缺陷边缘与周围金属的过渡衔接</b>。</p>
+        <p><b>为什么:</b>存 templates/ 是为了<b>保留真实缺陷的原始骨架</b>(给 Step 3 当变形底坯);训练权重外扩 +8px 是为了让 LoRA <b>学会缺陷边缘与周围金属的过渡衔接</b>;而严格单缺陷掩码,是<b>杜绝 LoRA 学会"一次画两个缺陷"</b>——一次只教一招。</p>
         <div class="minifigs">
           <div class="minifig">
             <svg viewBox="0 0 150 105" role="img" aria-label="阶段二之一:原始轮廓转二值模板,零外扩">
@@ -1485,15 +1495,15 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
     </div>
 
     <div class="tli" data-n="③">
-      <div class="tlhead"><b>合成重绘与裁剪落盘</b><code>synth_assets · Step 3 &amp; 4</code></div>
+      <div class="tlhead"><b>对齐重绘与落盘</b><code>synth_assets · Step 3 &amp; 4</code></div>
       <div class="tlcard">
         <p><b>做了什么(三个时刻):</b></p>
         <ul>
-          <li><b>重绘前</b>:取 <code class="inl">models/.../templates/</code> 的轮廓做弹性变形,再<b>外扩 <span class="kn">+8px</span></b> 得粗框 M_local,交给 AI 画缺陷;</li>
-          <li><b>重绘后</b>:前后相减(<span class="kn">|P_final − P_clean|</span>)按底噪倍数,把掩码<b>收紧回真实长出的缺陷边缘</b> M_GT——它就是落盘的 <code class="inl">*_mask.png</code>;</li>
+          <li><b>重绘前</b>:取 <code class="inl">models/.../templates/</code> 的轮廓做弹性变形 → <b>Halcon 单应对齐投射蒙版</b>(把蒙版精准投到当前底图坐标)→ <b>外扩 <span class="kn">+8px</span></b> 得粗框 M_local,且要求 <b>M_local 外接框 100% 落在检测区内</b>,再交给 AI 画缺陷;</li>
+          <li><b>重绘后</b>:前后相减(<span class="kn">|P_final − P_clean|</span>)按底噪倍数把掩码<b>收紧回真实长出的缺陷边缘</b> M_GT——它就是落盘的 <code class="inl">*_mask.png</code>;</li>
           <li><b>裁小图落盘</b>:按 M_GT 外接矩形<b>向外留 <span class="kn">+8px</span> 边距</b>,裁出 <code class="inl">*.png</code> 与 <code class="inl">*_mask.png</code>。</li>
         </ul>
-        <p><b>为什么:</b>重绘前扩 +8px 是给 AI 留融合缓冲;重绘后差分收紧是为了<b>剥离被 AI 填成正常金属的边框</b>(虚胖部分差值≈0,自动消失);裁小图留 +8px 是让 <code class="inl">*_mask.png</code> 四周有一圈金属背景余量,<b>供下游泊松外扩使用</b>。</p>
+        <p><b>为什么:</b>重绘前扩 +8px 是给 AI 留融合缓冲;<b>单应对齐 + 整框入区</b>,保证落盘小图四周的 8px 边距<b>全是纯金属——绝不混入黑孔</b>等检测区外内容;重绘后差分收紧是为了<b>剥离被 AI 填成正常金属的边框</b>(虚胖部分差值≈0,自动消失);裁小图留 +8px 是让 <code class="inl">*_mask.png</code> 四周有一圈金属背景余量,<b>供下游泊松外扩使用</b>。</p>
         <div class="minifigs">
           <div class="minifig">
             <svg viewBox="0 0 150 105" role="img" aria-label="阶段三之一:变形轮廓外扩8像素成为粗框">
@@ -1568,8 +1578,8 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
         <p><b>做了什么(严格三步):</b></p>
         <ol>
           <li><b>掩码外扩送泊松</b>:把 <span class="kn">m = (m_float &gt; 0.4)</span> 二值化后<b>外扩 <span class="kn">+5~7px</span></b>(贴边则自动补边),送入 <code class="inl">cv2.seamlessClone(NORMAL_CLONE)</code> 解泊松方程;</li>
-          <li><b>原掩码柔边回写</b>:仅按<b>未外扩</b>的 <span class="kn">m_float</span>(1px 柔边),把泊松调光后的缺陷<b>软混合</b>写回底图;</li>
-          <li><b>打训练标签</b>:按<b>未外扩</b>的 <span class="kn">m_float &gt; 0.25</span> 标为缺陷正样本 <span class="kn">1</span>。</li>
+          <li><b>原掩码柔边回写</b>:仅按<b>未外扩</b>的 <span class="kn">m_float</span>(1px 柔边),把泊松调光后的缺陷<b>软混合</b>写回底图,再按检测区边界将区外截断——锚点靠边时故意跨边贴入、齐边截断,<b>天然制造贴边缘的"塌边"缺陷样本</b>;</li>
+          <li><b>打训练标签</b>:按<b>未外扩</b>的 <span class="kn">m_float &gt; 0.25</span> 且<b>∩ 检测区</b>,标为缺陷正样本 <span class="kn">1</span>(区外不算)。</li>
         </ol>
         <p><b>为什么(对应三步):</b></p>
         <ul>

@@ -256,7 +256,7 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
     <div class="term"><b>domain 分区</b>一种特殊分区,名字必须叫 "domain",专供<b>对齐</b>使用——只有这个分区里的图像内容参与位置匹配,夹具、背景、反光都不算数。每个点位必备。</div>
     <div class="term"><b>检测区</b>绑了缺陷资产的分区之并集——训练与考试只在这块区域内出题/算分,区外一概不管。</div>
     <div class="term"><b>NG 图 / OK 图</b>NG = 带真实缺陷的照片(<code class="inl">.tmp</code> 标注里有 label ≠ "排除" 的多边形);OK = 干净照片(无标注,或只标了「排除」)。</div>
-    <div class="term"><b>.tmp 标注</b>与原图同名的多边形标注文件;label 为「砂眼」「划痕」等 = 真缺陷,「排除」= 刻意忽略的区域(如反光亮斑)。</div>
+    <div class="term"><b>.tmp 标注</b>与原图同名的多边形标注文件(标注工具「老表,标我.exe」绘制);label 为「砂眼」「划痕」等 = 真缺陷,「排除」= 刻意忽略的区域(如反光亮斑)。</div>
     <div class="term"><b>切块(tile)</b>模型一次只"看" 512×512 的小块;整张大图按网格切成许多块分别推理,再拼回整图。stride(步长)<span class="kn">384</span> = 相邻块错开 <span class="kn">128px</span> 重叠。</div>
     <div class="term"><b>热力图</b>模型对整图每个像素的"是缺陷"打分(0~1),画成一张温度图——越亮越像缺陷。超过 <span class="kn">0.5</span> 就报警。</div>
     <div class="term"><b>GT 标签(真值)</b>训练时告诉模型的标准答案图:缺陷 = <span class="kn">1</span>,正常背景 = <span class="kn">0</span>,不用学的地方 = <span class="kn">255</span>(忽略)。</div>
@@ -269,7 +269,7 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
     <div class="term"><b>Harris 角点</b>图像里"往哪个方向看都在变"的点(拐角、交界处),是匹配两图位置的锚钉。怎么算出来的、为什么非它不可?见 6.2 开头的三格图解。</div>
     <div class="term"><b>RANSAC</b>"少数派报告"式稳健匹配:拿角点配对猜变换,大多数配对都认同的那个才采信,个别错配直接出局。</div>
     <div class="term"><b>单应矩阵 H(8 自由度)</b>一张 3×3 的"坐标换算表",能表达平移+旋转+缩放+透视歪斜,把一张图的位置换算到另一张图。</div>
-    <div class="term"><b>内点(inliers)</b>认同最终变换的角点配对数,少于 <span class="kn">6</span> 个判定对齐失败。</div>
+    <div class="term"><b>内点(inliers)</b>认同最终变换的角点配对数,少于 <span class="kn">50</span> 个判定对齐失败——阈值从严,几十对都点头才敢信,偶然凑对的脆弱变换直接出局。</div>
     <div class="term"><b>有效像素掩码(native)</b>对齐回贴后,标出"这个位置真的拍到了内容"的黑白图——回贴后图外没内容的地方不算数。</div>
   </div>
 
@@ -581,7 +581,7 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
     <p>平坦区像一面空墙,没有任何记号;边缘像一条长长的线,线上每个点长得一模一样,挪一挪就认不出谁是谁;<b>角点像墙角的插座、脸上的痣</b>——独一无二,一眼锁定。基准图和待测图要认出"同一个点"来配对,靠的正是角点这种"胎记":配出几十对,才能解出单应 H 那张坐标换算表。金属表面看着平,放大全是刀纹、螺纹、微坑,微观拐角遍地——所以角点管够,还嫌多(所以才要 6.3 的"每格取最强 30 个"限额)。</p>
   </div>
 
-  <p>地基打好,回到正题。对齐器与 define_masks 的对齐实验<b>完全同款</b>(Point8DofAligner,全程 Halcon 原生算子)。<b>具体用到的技术依次是</b>:<code class="inl">points_harris</code> 找角点(只在 domain 分区内)→ 分 <span class="kn">6×6</span> 格、每格取最强 <span class="kn">30</span> 个 → <code class="inl">proj_match_points_ransac</code> 稳健配对解单应(NCC 灰度匹配、匹配掩窗 10px、gold_standard 精解、内点距离阈 <span class="kn">1.5px</span>、搜索容差 <span class="kn">80px</span>、随机种子 42 固定可复现)→ <code class="inl">projective_trans_image</code> 双线性回贴;内点不足 <span class="kn">6</span> 个直接判失败。</p>
+  <p>地基打好,回到正题。对齐器与 define_masks 的对齐实验<b>完全同款</b>(Point8DofAligner,全程 Halcon 原生算子)。<b>具体用到的技术依次是</b>:<code class="inl">points_harris</code> 找角点(只在 domain 分区内)→ 分 <span class="kn">6×6</span> 格、每格取最强 <span class="kn">30</span> 个 → <code class="inl">proj_match_points_ransac</code> 稳健配对解单应(NCC 灰度匹配、匹配掩窗 10px、gold_standard 精解、内点距离阈 <span class="kn">1.5px</span>、搜索容差 <span class="kn">80px</span>、随机种子 42 固定可复现)→ <code class="inl">projective_trans_image</code> 双线性回贴;内点不足 <span class="kn">50</span> 个直接判失败(阈值从严,防偶然凑对)。</p>
 
   <div class="co plain">
     <span class="tag">💡 大白话:单应矩阵 = 一张"透明胶片摆放说明书"</span>
@@ -636,7 +636,7 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
       <text x="585" y="225" text-anchor="middle" class="tm">(真拍到的区域)</text>
       <path d="M 585,182 L 585,190" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
 
-      <text x="340" y="262" text-anchor="middle" class="tm">角点不足 10 个 / 内点 &lt; 6 / 位移或缩放不合理 → 对齐失败:OK 图剔除训练,NG 图剔除考卷并告警</text>
+      <text x="340" y="262" text-anchor="middle" class="tm">角点不足 10 个 / 内点 &lt; 50 / 位移或缩放不合理 → 对齐失败:OK 图剔除训练,NG 图剔除考卷并告警</text>
       <text x="340" y="280" text-anchor="middle" class="tm">基准图自身 = 恒等变换,照常参与训练</text>
     </svg>
     <figcaption>对齐四步:① 基准图与待测图各找 Harris 角点(只在 domain 分区内——夹具、背景、反光不参与);② RANSAC 稳健配对解出 8 自由度单应 H;③ 待测图按 H⁻¹ 回贴到基准坐标系;④ 顺手生成"有效像素掩码"(回贴后真拍到的区域才算数)。</figcaption>
@@ -1150,7 +1150,7 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
     <tr><td><span class="kn">&gt;0.4</span></td><td>m_float 覆盖度超 0.4 才算"克隆用掩码"(送去解泊松的那份)</td></tr>
     <tr><td><span class="kn">5~7px</span></td><td>克隆前掩码外扩量(随机抽),必须盖过 OpenCV 内部腐蚀的 4px</td></tr>
     <tr><td><span class="kn">1px 柔边</span></td><td>回写权重 = 原掩码 m_float 经高斯(3×3, σ0.8)柔化,缺陷本体软混合、掩码外原样</td></tr>
-    <tr><td><span class="kn">&gt;0.25</span></td><td>GT 标签门限——比克隆用的 0.4 更低,边缘"低阈值连通"都算缺陷</td></tr>
+    <tr><td><span class="kn">&gt;0.25</span></td><td>GT 标签门限——比克隆用的 0.4 更低,边缘"低阈值连通"都算缺陷;且<b>与检测区相交</b>(∩ zone)——跨出检测区的部分不算</td></tr>
     <tr><td><span class="kn">垫边</span></td><td>外扩越出素材边界时,复制最边缘像素垫够宽(条件触发,不是每次都垫)</td></tr>
   </table>
   </div>
@@ -1166,7 +1166,7 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
 
   <h3>8.6 第⑦步:截断与两道复检</h3>
   <ul>
-    <li><b>截断到检测区</b>:泊松融合<b>先</b>完整做完,再把超出检测区(如加工面外)的像素还原成原底图——缺陷贴在加工面边缘时呈现自然的「到边界戛然而止」,不会在区域边缘留一圈假融合接缝;标签也夹回区内。</li>
+    <li><b>截断到检测区</b>:泊松融合<b>先</b>完整做完,再把超出检测区(如加工面外)的像素还原成原底图——缺陷贴在加工面边缘时呈现自然的「到边界戛然而止」,不会在区域边缘留一圈假融合接缝;标签也夹回区内。这一步还有一层用意:锚点靠边时故意让缺陷<b>跨边贴入再齐边截断</b>,<b>天然制造贴着检测区边缘的"塌边"缺陷样本</b>——模型因此学会识别长在边缘上的缺陷。</li>
     <li><b>落地规格复检</b>:量截断后的区内真值,面积/长度必须仍在 [min, max] 内——超了就重抽。</li>
     <li><b>可见性复检</b>(VISIBLE_MIN_DIFF):标签区内 |贴后 − 贴前| 的平均灰度差不足 <span class="kn">4.0</span> 灰度级 → 作废重抽。<b>看不见的缺陷硬标 1 = 噪声标签</b>,会毒化模型("透明正样本")。</li>
   </ul>
@@ -1498,7 +1498,7 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
     <tr><td><span class="kn">0.5</span>(THRESHOLD)</td><td>考试</td><td>报警阈值写死不扫描;单图超 10s 当轮作废</td></tr>
     <tr><td><span class="kn">16 / 8</span></td><td>考试批 / autotune</td><td>考试批尺寸 16(暖机含 8);batch = 显存÷3 夹 [8,16]</td></tr>
     <tr><td><span class="kn">r=16 / α=32</span></td><td>分割 LoRA</td><td>旁路秩与缩放;B 零初始化起步恒等</td></tr>
-    <tr><td><span class="kn">6×6×30</span></td><td>对齐</td><td>角点分 6×6 网格、每格取最强 30 个;内点 ≥6 才算成功</td></tr>
+    <tr><td><span class="kn">6×6×30</span> / <span class="kn">≥50</span></td><td>对齐</td><td>角点分 6×6 网格、每格取最强 30 个;内点 ≥50 才算成功(阈值从严,防偶然凑对)</td></tr>
     <tr><td><span class="kn">20260927</span>(seed)/ <span class="kn">8300</span></td><td>全局</td><td>固定随机种子(可复现)/ 监控网页端口</td></tr>
     <tr><td><span class="kn">3 份</span></td><td>会话管理</td><td>.tmp 归档保留最近 3 份;models/ 每次清空重来</td></tr>
     <tr><td><span class="kn">100</span> 步</td><td>采样图</td><td>每 100 训练步存一张(红框标缺陷真实位置)</td></tr>

@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vision_supervised"
+version = "0.2.0"
+description = "Supervised seg model (OfficialEfficientViTSeg) + 8-DoF inverse alignment & effective-zone primitives shared by train/infer"
+requires-python = ">=3.10,<3.11"
+
+[tool.setuptools]
+packages = ["efficientvit", "efficientvit.models", "efficientvit.models.nn",
+            "efficientvit.models.utils", "efficientvit.models.efficientvit",
+            "vision_supervised"]

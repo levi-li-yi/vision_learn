@@ -1,0 +1,31 @@
+# vision-ai-inference-v2 依赖（纯监督）
+# 部署：Windows win_amd64 · Python 3.10 · CUDA 12.8（conda env cv 同源环境）
+# 安装：项目内建 .venv 后遍历安装 wheels（--no-build-isolation + 阿里云镜像，真气隙加 --no-index）
+#   pip install --no-build-isolation (Get-ChildItem "E:\.wheels\*.whl") -i https://mirrors.aliyun.com/pypi/simple/
+# 校验：python -c "import torch; print(torch.__version__, torch.cuda.is_available())" 期望 2.7.1+cu128 True
+#
+# v2 相对 v1 的依赖瘦身：
+#   删除 vision_unsupervised / vision_evs（非监督线与 ImageEncoderArgs 消亡）
+#   删除 flash_attn（新模型 import 链零引用，仅旧 wheel 需要——GitHub-only 大包解除）
+#   删除 timm / bitsandbytes（不在模型 import 路径上；以导入回归为准，如缺失再补）
+
+--index-url https://mirrors.aliyun.com/pypi/simple/
+--find-links https://mirrors.aliyun.com/pytorch-wheels/cu128/
+--find-links=wheels
+
+# 本地大包（CUDA 编译，产线缓存 E:\.wheels / 本工程 wheels/）
+torch==2.7.1+cu128
+torchvision==0.22.1+cu128
+segment-anything==1.0
+opencv-python==4.13.0.92
+mvtec-halcon==24111.0.0
+
+# 自研共享 wheel（先由 vendor/vision_supervised-0.2.0 构建产出，再放入 wheels/）
+vision_supervised==0.2.0
+
+# 线上小包
+numpy==2.2.6
+fastapi==0.136.1
+uvicorn==0.46.0
+pydantic==2.13.4
+Pillow==12.2.0

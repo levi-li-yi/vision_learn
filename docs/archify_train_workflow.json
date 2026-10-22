@@ -1,0 +1,71 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "train · 多点位缺陷分割训练全景",
+    "locale": "zh-CN",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    { "id": "data", "label": "事件线 0~2 · 数据准备" },
+    { "id": "synth", "label": "事件线 3A · 在线造题" },
+    { "id": "train", "label": "事件线 3B · 模型训练" },
+    { "id": "eval", "label": "事件线 3C/D/4 · 验证·考试·交付" },
+    { "id": "infra", "label": "运行支撑" }
+  ],
+  "phases": [
+    { "id": "prep", "label": "备料", "fromCol": 0, "toCol": 0 },
+    { "id": "epoch", "label": "Epoch 循环(上限 20 轮)", "fromCol": 3, "toCol": 5, "variant": "emphasis" }
+  ],
+  "mainPath": [
+    "checkup", "align", "split", "pool", "poisson", "model", "loss",
+    "val", "exam", "deploy"
+  ],
+  "nodes": [
+    { "id": "checkup", "lane": "data", "col": 0, "type": "backend", "label": "素材体检", "sublabel": "checkup.py · 账本对号入座", "tag": "不合格红字退出", "width": 150 },
+    { "id": "align", "lane": "data", "col": 1, "type": "backend", "label": "整图对齐", "sublabel": "align.py · Harris+RANSAC 单应", "tag": "内点 ≥ 50", "width": 150 },
+    { "id": "quarantine", "lane": "data", "col": 1, "type": "security", "label": "失败隔离", "sublabel": "align_failed/ 移出", "width": 132, "yOffset": 76 },
+    { "id": "split", "lane": "data", "col": 2, "type": "backend", "label": "固定分卷", "sublabel": "budget.py · val/独立·8:2 早停≤10", "tag": "全量入池", "width": 150 },
+    { "id": "pool", "lane": "synth", "col": 3, "type": "database", "label": "均衡配额池", "sublabel": "每块·每区·每种 1:1", "tag": "中位锚定+对比度定向", "width": 150 },
+    { "id": "poisson", "lane": "synth", "col": 3, "type": "messagebus", "label": "残差泊松融合", "sublabel": "0.5x 居中 + 65:35 混合", "tag": "区外 2px 羽化", "width": 148, "yOffset": 76 },
+    { "id": "model", "lane": "train", "col": 4, "type": "backend", "label": "分割模型", "sublabel": "EfficientViT-SAM + LoRA 旁路", "tag": "冻眼力·只拧 6%", "width": 156 },
+    { "id": "loss", "lane": "train", "col": 4, "type": "database", "label": "Focal + Dice", "sublabel": "PointRend 智能采样", "tag": "α=0.4 γ=2.0 ×3.0", "width": 142, "yOffset": 76 },
+    { "id": "val", "lane": "eval", "col": 4, "type": "database", "label": "验证早停", "sublabel": "val_loss 全像素同尺", "tag": "连续 4 轮不降→收工", "width": 150 },
+    { "id": "exam", "lane": "eval", "col": 5, "type": "database", "label": "考试选型", "sublabel": "hit_defects 优先·总交集", "tag": "阈值 0.5 写死", "width": 150 },
+    { "id": "deploy", "lane": "eval", "col": 5, "type": "cloud", "label": "交付落盘", "sublabel": "best 权重 + deploy/ 推理包", "width": 150, "yOffset": 76 },
+    { "id": "web", "lane": "infra", "col": 2, "type": "frontend", "label": "监控 Web", "sublabel": "http://IP:8300 直播间", "width": 142 }
+  ],
+  "edges": [
+    { "id": "e-checkup-align", "from": "checkup", "to": "align", "variant": "default", "role": "main", "label": "通过" },
+    { "id": "e-align-quarantine", "from": "align", "to": "quarantine", "variant": "dashed", "role": "error", "label": "对不上号" },
+    { "id": "e-align-split", "from": "align", "to": "split", "variant": "default", "role": "main", "label": "对齐成功" },
+    { "id": "e-split-pool", "from": "split", "to": "pool", "variant": "default", "role": "main", "label": "训练底图 + 变体数 V" },
+    { "id": "e-pool-poisson", "from": "pool", "to": "poisson", "variant": "default", "role": "main", "label": "贴题任务" },
+    { "id": "e-poisson-model", "from": "poisson", "to": "model", "variant": "default", "role": "main", "label": "GT 标签 1/0/255" },
+    { "id": "e-model-loss", "from": "model", "to": "loss", "variant": "default", "role": "main", "label": "前向→损失" },
+    { "id": "e-loss-val", "from": "loss", "to": "val", "variant": "default", "role": "main", "label": "每轮结束" },
+    { "id": "e-val-exam", "from": "val", "to": "exam", "variant": "default", "role": "main", "label": "val_loss 出分" },
+    { "id": "e-exam-deploy", "from": "exam", "to": "deploy", "variant": "emphasis", "role": "main", "label": "创纪录" },
+    { "id": "e-val-loop", "from": "val", "to": "pool", "variant": "dashed", "role": "return", "label": "下一轮 Epoch" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "一条命令的旅程",
+      "items": [
+        "体检→对齐→分卷→造题→训练→验证→考试→交付",
+        "Epoch 循环:考试未创纪录 → 回到造题继续练(上限 20 轮)",
+        "失败重抽 / 对齐隔离 / 早停收工,三条安全出口"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "核心技术节点",
+      "items": [
+        "残差泊松:0.5x 居中求解,65:35 混合,区外 2px 羽化",
+        "均衡配额池:每块·每区·每种缺陷,正负 1:1 精确配额",
+        "LoRA 旁路:冻眼力只拧 6%,B 零初始化起步恒等"
+      ]
+    }
+  ]
+}

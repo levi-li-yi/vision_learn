@@ -13,3 +13,6 @@ checkpoints/
 samples/
 cifar_data/
 _heat.png
+
+# 数据集压缩包（超 GitHub 100MB 单文件限制，不入库）
+datasets.zip

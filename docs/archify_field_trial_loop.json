@@ -1,0 +1,61 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "模型推理现场试用期闭环流程",
+    "locale": "zh-CN",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    { "id": "ops", "label": "发布与运维 · inference-v2" },
+    { "id": "field", "label": "现场试用 · 业务人员" },
+    { "id": "data", "label": "数据回流 · 转化处置" },
+    { "id": "train", "label": "迭代训练 · train 引擎" },
+    { "id": "guard", "label": "例外处置与转正出口", "variant": "exception" }
+  ],
+  "groups": [
+    { "id": "g_data", "label": "回流处置", "lane": "data", "fromCol": 0, "toCol": 1, "variant": "dashed" },
+    { "id": "g_train", "label": "增量迭代与择优", "lane": "train", "fromCol": 1, "toCol": 2, "variant": "emphasis" }
+  ],
+  "mainPath": ["delivery", "preflight", "publish", "detect", "review", "marking"],
+  "semanticChecks": {
+    "allowedRoots": ["delivery"],
+    "allowedTerminals": ["graduate", "rollback", "calib_fix"],
+    "requiredEdges": [
+      { "from": "marking", "to": "convert" },
+      { "from": "convert", "to": "finetune" },
+      { "from": "exam", "to": "publish" }
+    ]
+  },
+  "nodes": [
+    { "id": "delivery", "lane": "ops", "col": 0, "type": "backend", "label": "训练交付", "sublabel": "models/{产品}/ best+deploy", "width": 172 },
+    { "id": "preflight", "lane": "ops", "col": 1, "type": "security", "label": "Preflight 体检", "sublabel": "四态清单 + 疑似降级", "tag": "发布闸门", "width": 172 },
+    { "id": "publish", "lane": "ops", "col": 2, "type": "cloud", "label": "整目录拷入·热更新", "sublabel": "mtime 签名 · 服务不重启", "width": 188 },
+    { "id": "detect", "lane": "ops", "col": 3, "type": "messagebus", "label": "在线推理 /detect", "sublabel": "is_ok+轮廓+毫米测量", "width": 188 },
+    { "id": "review", "lane": "field", "col": 4, "type": "frontend", "label": "业务复核", "sublabel": "NG 逐件 · OK 抽检", "width": 168 },
+    { "id": "marking", "lane": "field", "col": 5, "type": "external", "label": "误报/漏报标注", "sublabel": "标记工具 · 图上标注", "width": 172 },
+    { "id": "convert", "lane": "data", "col": 0, "type": "database", "label": "标注转化入池", "sublabel": "原图坐标系 .bmp+.tmp", "tag": "每类 ≥4 实例", "width": 196 },
+    { "id": "zone_fix", "lane": "data", "col": 1, "type": "database", "label": "固定误报→排除区", "sublabel": "调 .tmp 排除 / 分区定义", "width": 196 },
+    { "id": "finetune", "lane": "train", "col": 1, "type": "backend", "label": "增量精调重训", "sublabel": "train --base best", "tag": "增量缓存秒跳", "width": 184 },
+    { "id": "exam", "lane": "train", "col": 2, "type": "security", "label": "考卷验收择优", "sublabel": "val/ + quality_score", "tag": "只升不降", "width": 184 },
+    { "id": "calib_fix", "lane": "guard", "col": 3, "type": "backend", "label": "示教/标定修正", "sublabel": "vision-ai-calibration", "width": 184 },
+    { "id": "rollback", "lane": "guard", "col": 4, "type": "security", "label": "回滚旧版模型", "sublabel": "旧目录重拷 · 分钟级", "width": 180 },
+    { "id": "graduate", "lane": "guard", "col": 5, "type": "external", "label": "转正式运行", "sublabel": "误报/漏报连续达标", "width": 172 }
+  ],
+  "edges": [
+    { "id": "e_delivery_preflight", "from": "delivery", "to": "preflight", "variant": "default" },
+    { "id": "e_preflight_publish", "from": "preflight", "to": "publish", "variant": "emphasis" },
+    { "id": "e_publish_detect", "from": "publish", "to": "detect", "label": "JIT 换新权重", "variant": "default" },
+    { "id": "e_detect_review", "from": "detect", "to": "review", "label": "判定结果+原图", "variant": "default" },
+    { "id": "e_review_marking", "from": "review", "to": "marking", "label": "发现误报/漏报", "variant": "emphasis" },
+    { "id": "e_marking_convert", "from": "marking", "to": "convert", "label": "标注回流", "variant": "emphasis" },
+    { "id": "e_convert_zone", "from": "convert", "to": "zone_fix", "label": "固定位置反复误报", "variant": "dashed", "role": "branch" },
+    { "id": "e_convert_finetune", "from": "convert", "to": "finetune", "label": "按批汇总", "variant": "default" },
+    { "id": "e_zone_finetune", "from": "zone_fix", "to": "finetune", "label": "改后重训", "variant": "dashed" },
+    { "id": "e_finetune_exam", "from": "finetune", "to": "exam", "label": "候选 best", "variant": "default" },
+    { "id": "e_exam_publish", "from": "exam", "to": "publish", "label": "score 提升·再发布", "variant": "emphasis", "role": "return" },
+    { "id": "e_detect_calib", "from": "detect", "to": "calib_fix", "label": "配准告警频发", "variant": "dashed", "role": "branch" },
+    { "id": "e_review_rollback", "from": "review", "to": "rollback", "label": "新版表现异常", "variant": "security", "role": "error" },
+    { "id": "e_review_graduate", "from": "review", "to": "graduate", "label": "指标连续达标", "variant": "dashed", "role": "branch" }
+  ]
+}

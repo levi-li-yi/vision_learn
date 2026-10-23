@@ -183,8 +183,8 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
     <div class="heropills">
       <span>📖 源文档:docs/README.md + train 工程源码</span>
       <span>✅ README 与源码技术点无删减覆盖</span>
-      <span>🖼️ 四十余张手绘示意图</span>
-      <span>⏱️ 通读约 60 分钟</span>
+      <span>🖼️ 40 张手绘示意图</span>
+      <span>⏱️ 通读约 70 分钟</span>
     </div>
     <svg viewBox="0 0 900 96" role="img" aria-label="三样输入进入 train 训练,产出最优模型与推理包的示意">
       <text x="10" y="22" fill="#cfe9d8" font-size="12.5">三样输入(全在 datasets/{产品}/)</text>
@@ -213,12 +213,12 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
   <a href="#prep">第2章 · 训前四件事</a>
   <a href="#dirs">第3章 · 目录与配置</a>
   <a href="#pipeline">第4章 · 事件线总览</a>
-  <a href="#checkup">第5章 · 1 素材体检</a>
-  <a href="#align">第6章 · 2.1~2.2 整图对齐</a>
-  <a href="#split">第7章 · 2.3~4 小图·合成·分卷</a>
-  <a href="#synth">第8章 · 5.2 在线造题</a>
-  <a href="#model">第9章 · 5.3 模型与训练</a>
-  <a href="#exam">第10章 · 5.4~5.5 验证与考试</a>
+  <a href="#checkup">第5章 · 素材体检</a>
+  <a href="#align">第6章 · 逆向对齐·有效检测区</a>
+  <a href="#split">第7章 · 小图池·LoRA·预算</a>
+  <a href="#synth">第8章 · 阶段3 在线造题</a>
+  <a href="#model">第9章 · 模型与训练</a>
+  <a href="#exam">第10章 · 验证与考试</a>
   <a href="#deploy">第11章 · 交付落盘</a>
   <a href="#web">第12章 · 监控与多卡</a>
   <a href="#cheatsheet">第13章 · 数字速查表</a>
@@ -254,7 +254,7 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
 
   <h3>这本手册怎么读?</h3>
   <ul>
-    <li>每章对应 README「训练事件线」的一个阶段,并补充了源码里的真实细节(常量、公式、坑);</li>
+    <li>每章对应 README「宏观大流程」的一个环节,并补充了源码里的真实细节(常量、公式、坑);</li>
     <li>看不懂的词随时回<b>第 1 章词表</b>;绿色小方块 <span class="kn">512</span> 是关键数字,第 13 章有完整速查表;</li>
     <li>四色提示框:💡蓝色=大白话比喻,🎯绿色=为什么这么设计,⚠️黄色=注意/坑,📖紫色=故事;</li>
     <li>与《synth_assets 图解手册》是姊妹篇:素材从哪来、泊松贴图的底层细节,那本讲得更细,本册自包含但点到即止。</li>
@@ -272,13 +272,13 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
     <div class="term"><b>基准图 {基准图名}.bmp</b>每个点位选定的"标准照片",配套 <code class="inl">{基准图名}.json</code> 分区定义。全点位其他照片都要向它"对齐看齐"。</div>
     <div class="term"><b>分区</b>基准图上人工画好的区域(存于 json),如「加工面」= 允许出现缺陷、需要检测的区域。</div>
     <div class="term"><b>domain 分区</b>一种特殊分区,名字必须叫 "domain",专供<b>对齐</b>使用——只有这个分区里的图像内容参与位置匹配,夹具、背景、反光都不算数。每个点位必备。</div>
-    <div class="term"><b>检测区</b>绑了缺陷资产的分区之并集——训练与考试只在这块区域内出题/算分,区外一概不管。</div>
-    <div class="term"><b>NG 图 / OK 图</b>NG = 带真实缺陷的照片(<code class="inl">.tmp</code> 标注里有 label ≠ "排除" 的多边形);OK = 干净照片(无标注,或只标了「排除」)。新版:根目录 NG 图当<b>训练底图</b>用(真缺陷 255 屏蔽 + 像素修补);独立考卷单独放 <code class="inl">{点位}/val/</code>。</div>
+    <div class="term"><b>检测区 / 有效检测区</b>基准图上人工画的分区,经逆向投射 + ±10px 边缘吸附落到每张照片上,就是该图的"有效检测区"——训练与考试只在这块区域内出题/算分,区外一律不管。</div>
+    <div class="term"><b>NG 图 / OK 图</b>NG = 带真实缺陷的照片(<code class="inl">.tmp</code> 标注里有 label ≠ "排除" 的多边形);OK = 干净照片(无标注,或只标了「排除」)。两种图都入训练池:NG 图贡献<b>缺陷实例</b>(抠真实小图、训 LoRA),但沾到标注的切块会被训练<b>整块跳过</b>;独立考卷单独放 <code class="inl">{点位}/val/</code>。</div>
     <div class="term"><b>val/ 独立考卷 · 早停集</b>考卷 = {点位}/val/ 目录里人工手工放入的真缺陷图,绝不进训练池;训练池 8:2 分出的固定小题集(每点位 ≤10 张)叫<b>早停集</b>,只用来算 val_loss 判"要不要继续练"。</div>
-    <div class="term"><b>命中数(hit_defects)与综合质量分</b>考试指标:每个标注多边形与报警交集 ≥1px 记"命中 1 个";best 按 <b>quality_score = 命中数×1000 + 总交集像素 − 0.1×标注外误报像素</b> 择优——检出全、定位准、<b>误报还要少</b>。</div>
-    <div class="term"><b>真实缺陷小图(real_patches/)</b>阶段 2.3 从<b>原图原生像素</b>上抠出的小图 + 掩码(非 512,四周留 <span class="kn">8px</span>):<b>完整保留人工标注轮廓</b>(贴边缺陷不沿分区边界腰斩),掩码外一切像素(外扩边距、邻近标注、区外黑槽)统一填成所属检测区背景中值 bg_fill——零插值失真,是规格测算、LoRA 形变模板与贴题的"真样本源"。</div>
-    <div class="term"><b>合成缺陷小图(synth_cache/)</b>阶段 3.3 内置 FLUX LoRA 在 512 背景块上画出假缺陷后,差分抠出的单个假缺陷小图 + 掩码(非 512),按 <code class="inl">{点位}__{分区}/</code> 归档缓存;与真实小图遵循同一纯化原则(掩码外全填 bg_fill)。</div>
-    <div class="term"><b>净化训练底图(.clean.png)</b>阶段 5.1 把底图上三类区域抹平修补后的干净整图:①已标真实缺陷(外扩 <span class="kn">8px</span>)②「排除」区(外扩 <span class="kn">8px</span>)③对齐微偏的边界污染(边界带 ≤<span class="kn">5.5px</span> 检出,外扩 <span class="kn">2px</span>)——训练切块全部从它裁,被抹位置标 255。</div>
+    <div class="term"><b>命中数(hit_defects)与综合质量分</b>考试指标:每个标注多边形与报警交集 ≥1px 记"命中 1 个";best 按 <b>quality_score = 命中数×3000 + 总交集像素 − 0.05×标注外误报像素</b> 择优——召回优先、定位准、<b>误报还要少</b>。</div>
+    <div class="term"><b>真实小缺陷图(real_*.png)</b>从<b>原图原生像素</b>上抠出的小图 + 掩码(非 512,四周留 <span class="kn">8px</span>):<b>完整保留人工标注轮廓</b>(贴边缺陷不沿分区边界腰斩),掩码外像素优先填小图局部「有效检测区 ∩ 环带」的灰度中值——零插值失真,是规格测算、LoRA 形变模板与贴题的"真样本源",按 <code class="inl">patches/{检测区}/{缺陷}/</code> 归档。</div>
+    <div class="term"><b>合成小缺陷图(synth_*.png)</b>内置 FLUX LoRA 在<b>目标产品自己的底图</b>上重绘假缺陷、双阈值差分抠出的小图 + 掩码(非 512),与真实小图同池<b>平权混用</b>,同存 <code class="inl">patches/{检测区}/{缺陷}/</code>;形状模板取自真实缺陷掩码的洗牌轮转 + 随机弹性形变。</div>
+    <div class="term"><b>干净切块(不净化)</b>系统对底图<b>零修补、零扭曲</b>(全程不做 inpaint):切块时把沾到任何标注(含外扩 <span class="kn">4px</span>)或不含有效检测区的 512 块<b>整块跳过</b>——留下的每一块都是 100% 无瑕的原始相机像素。</div>
     <div class="term"><b>.tmp 标注</b>与原图同名的多边形标注文件(标注工具「老表,标我.exe」绘制);label 为「砂眼」「划痕」等 = 真缺陷,「排除」= 刻意忽略的区域(如反光亮斑)。</div>
     <div class="term"><b>切块(tile)</b>模型一次只"看" 512×512 的小块;整张大图按网格切成许多块分别推理,再拼回整图。stride(步长)<span class="kn">384</span> = 相邻块错开 <span class="kn">128px</span> 重叠。</div>
     <div class="term"><b>热力图</b>模型对整图每个像素的"是缺陷"打分(0~1),画成一张温度图——越亮越像缺陷。超过 <span class="kn">0.5</span> 就报警。</div>
@@ -288,13 +288,13 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
 
   <h3>🧭 对齐相关</h3>
   <div class="terms">
-    <div class="term"><b>对齐(align)</b>相机每次拍的位置总有毫米级偏差。把每张照片"搬"回基准图坐标系,让同一位置在各张图里像素对像素重合,才能跨图混着训练。</div>
+    <div class="term"><b>对齐(逆向精对齐)</b>相机每次拍的位置总有毫米级偏差。与"把照片掰正"相反,这里<b>照片一张都不动</b>:解出"基准图 → 照片"的单应 H,把基准图上的分区逆向投射到每张照片上,再经 ±10px 边缘吸附得到各自的"有效检测区"——原图始终保持 100% 原始像素。</div>
+    <div class="term"><b>±10px 边缘吸附</b>刚性投射后,分区边界与照片上真实的零件边缘往往差几像素:沿轮廓法向在 ±10px 内找灰度梯度最大的真实边缘"吸"过去(支持带孔洞与孔内凸台的复杂嵌套拓扑),这就是"二次精对齐"。</div>
     <div class="term"><b>Harris 角点</b>图像里"往哪个方向看都在变"的点(拐角、交界处),是匹配两图位置的锚钉。怎么算出来的、为什么非它不可?见 6.2 开头的三格图解。</div>
     <div class="term"><b>RANSAC</b>"少数派报告"式稳健匹配:拿角点配对猜变换,大多数配对都认同的那个才采信,个别错配直接出局。</div>
     <div class="term"><b>单应矩阵 H(8 自由度)</b>一张 3×3 的"坐标换算表",能表达平移+旋转+缩放+透视歪斜,把一张图的位置换算到另一张图。</div>
     <div class="term"><b>内点(inliers)</b>认同最终变换的角点配对数,少于 <span class="kn">50</span> 个判定对齐失败——阈值从严,几十对都点头才敢信,偶然凑对的脆弱变换直接出局。</div>
-    <div class="term"><b>有效像素掩码(native)</b>对齐回贴后,标出"这个位置真的拍到了内容"的黑白图——回贴后图外没内容的地方不算数。</div>
-    <div class="term"><b>摆正图(对齐缓存图)</b>原照片按 H"掰正"后生成的基准系灰度副本(aligncache/ 下,与 .valid.png 成对存放)——训练与考试的切块全部从它(净化版 .clean.png)裁,原图一个字节不动。</div>
+    <div class="term"><b>紧贴区 vs 圆滑区</b>同一张照片的有效检测区做两版:<b>紧贴版</b>(训练/贴图用)直接吸在真实边缘内侧,保证切出的底图块 100% 干净;<b>圆滑版</b>(推理与缺陷归属用)对轮廓圆滑架桥,跨过手画锯齿与边缘缺口——贴边缺陷、崩边不被漏掉,也不会误入相邻区。</div>
     <div class="term"><b>距离变换</b>给分区每个点算"到分区边界有多远"的距离地图;智能放置靠它找近边带、开阔地和孔心。</div>
   </div>
 
@@ -308,26 +308,26 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
     <div class="term"><b>Dice 损失</b>衡量"圈出来的形状和答案重合度"的损失(1 = 完美重合),和 Focal 加在一起用(权重 ×3)。</div>
     <div class="term"><b>PointRend?已退役</b>早期版本训练损失用 PointRend 智能采样(抽点、75% 挑最不确定处)省算力;新版为让训练与验证<b>同尺同构</b>、跨轮可比,训练与验证统一改为<b>全像素稠密 Focal+Dice</b>(自动屏蔽 255)。</div>
     <div class="term"><b>epoch(轮)</b>把训练题集完整过一遍 = 1 轮;上限 <span class="kn">20</span> 轮,练满 <span class="kn">8</span> 轮后允许早停。</div>
-    <div class="term"><b>均衡配额池</b>新版出题账本:每块·每区·每种缺陷按可用面积折算配额,正负样本精确 1:1 交错;图极多时按轮<b>分片轮换</b>,跨轮 100% 覆盖。</div>
+    <div class="term"><b>统一注水预算 + 牌靴</b>出题账本:按背景域 (点位, 检测区) 的干净块数 T 与缺陷种数 D,以权重 √(T×D) 在上下界内"注水"分配单轮正样本配额,正负严格 1:1;每个 (检测区, 缺陷) 的素材池配一只<b>无放回洗牌牌靴</b>——每张真实/合成小图都发过一轮牌才重新洗,绝无素材闲置。</div>
     <div class="term"><b>batch</b>一次同时喂给显卡的图块数。不手填——按显存自动算(显存 GB ÷ 3,夹在 8~16)。</div>
     <div class="term"><b>学习率 / 热身 / 余弦</b>每步拧旋钮的幅度。先线性热身(1 轮,从小步开始),再按余弦曲线缓缓收小。</div>
-    <div class="term"><b>val_loss 与早停</b>每轮在固定验证题集上算损失;连 <span class="kn">4</span> 轮不降(且已练满 8 轮)就提前收工,防过拟合。</div>
+    <div class="term"><b>val_loss 与早停</b>每轮在固定验证题集上算损失;练满 <span class="kn">max(8, 分片数)</span> 轮后连 <span class="kn">4</span> 轮不降(降幅超 2e-3)就提前收工,防过拟合。</div>
     <div class="term"><b>EMA(近期平均权重)</b>另存一份"滑动平均"的权重(decay 0.999)——把近期每步的抖动平均掉,验证/考试/交付全用这份,口径统一。</div>
     <div class="term"><b>bf16</b>低精度记数法,省显存提速;指数位与 fp32 相同,不会下溢,无需损失缩放。</div>
-    <div class="term"><b>DDP 多卡</b>多张显卡分工并行训练,共享同一均衡配额池、按分片轮换出题(每片内严格正负 1:1);考试只由 0 号卡独占执行。</div>
+    <div class="term"><b>DDP 多卡</b>多张显卡分工并行训练,共享同一注水预算与牌靴(无放回发牌序号跨卡完全一致);考试只由 0 号卡独占执行,阶段 1 的 LoRA 训练也吃多卡并行。</div>
     <div class="term"><b>迁移 / 精调(--base)</b>不从头学,拿现成权重当起点:官方骨干,或自家/他产品的 best_*.pth。</div>
   </div>
 
   <h3>🧩 图像处理手法</h3>
   <div class="terms">
-    <div class="term"><b>泊松融合(seamlessClone)</b>把缺陷的明暗变化"解方程"融进底图,灯光自然衔接。用 <b>NORMAL_CLONE</b> 模式(MIXED_CLONE 的 45° 梯度判据会让斜划痕发淡,弃用)。</div>
+    <div class="term"><b>泊松融合(零光晕)</b>把缺陷的明暗残差"解方程"融进底图(NORMAL_CLONE);残差 = 50% 泊松 + 50% 素材原生,<b>只在缺陷标签内部落笔</b>——正常背景(label=0)一个像素都不被改写,无光晕污染。</div>
     <div class="term"><b>内部腐蚀 4px</b>OpenCV 泊松底层会偷偷把掩码向内啃 4px——所以送入前必须先外扩 <span class="kn">5~7px</span> 保住缺陷边缘梯度。</div>
-    <div class="term"><b>柔边回写</b>泊松结果不整块照抄:按原掩码 1px 高斯柔化的权重,只把缺陷本体混回底图,掩码外 100% 保留原图刀纹。</div>
+    <div class="term"><b>柔边回写</b>泊松残差不整块照抄:缺陷标签外圈 1px 权重 0.55、往内 ≥2px 即满幅 1.0;在 label=0 处权重恒为 0——缺陷贴得牢,背景纹丝不动。</div>
     <div class="term"><b>对数均匀抽样</b>在 [min, max] 里抽目标大小时"每个数量级等概率"——普通均匀抽样会让大缺陷霸屏,小砂眼几乎抽不到。</div>
     <div class="term"><b>上下文画布</b>贴缺陷不止贴在 512 块内,而是贴在「块 + 四周一圈真实底图」的大画布上再裁回——跨块缺陷也能完整融合。</div>
     <div class="term"><b>边缘复制填充</b>旋转素材时,空出来的角落用边缘像素复制填满,避免黑角混进内容。</div>
     <div class="term"><b>重叠窗加权拼接</b>整图切块推理后,相邻块 128px 重叠带按"此消彼长"的线性权重窗拼回,块边(最不准处)自动降权,热力图无拼缝。</div>
-    <div class="term"><b>INPAINT 修补</b>把图上选中的一块按周围背景"脑补"填平(TELEA 算法);train 用它把底图三类区域(真缺陷/排除区/边界污染)抹成干净金属,也用于抹掉 LoRA 训练块内的其他标注。</div>
+    <div class="term"><b>INPAINT?已全面退役</b>早期版本用它修补底图真缺陷、LoRA 图块内其他标注;新版判定风险大于收益——底图<b>零净化</b>(脏块直接跳过)、LoRA 图块内其他标注直接置损失权重 0,全程不再做任何修补。</div>
   </div>
 
   <h3>🏗️ 工程协作</h3>
@@ -336,7 +336,8 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
     <div class="term"><b>监控 web(8300)</b>训练时自动开的网页(<code class="inl">http://服务器IP:8300</code>),看曲线、NG 图、热力图;无鉴权,仅限内网。</div>
     <div class="term"><b>best 权重</b>models/ 里唯一的最终模型文件,文件名自带成绩:<code class="inl">best_int1200_ep10.pth</code> = 总交集 1200、第 10 轮。</div>
     <div class="term"><b>deploy/ 推理包</b>按点位分子目录的"开箱即用"包:各点位的 json + 基准图 + manifest.json 清单(含自动归属的 zones 分区×缺陷绑定)。</div>
-    <div class="term"><b>.tmp/ 与归档</b>过程文件住 .tmp/,每次新会话把旧 .tmp 归档、只留最近 <span class="kn">3</span> 份;但<b>五类增量缓存跨会话保留</b>(体检/对齐/归属/配额/净化),素材没改就秒级跳过 1~5.1。models/ 里分割交付物(best/deploy)清空重来,<b>lora/ 生成模型保留</b>。</div>
+    <div class="term"><b>.tmp/ 与归档</b>前置中间产物(align.json / patches/ / lora/ / prep_fingerprints.json)跨会话保留;每次新会话只归档运行态(ep*/latest/sample/web/logs,留 <span class="kn">3</span> 份)。<b>models/ 要等体检与前置全部成功后才归档旧版重建</b>——中途报错,上一版 best 完好无损。</div>
+    <div class="term"><b>开局跳过检测(prep_plan)</b>训练启动伊始,一次性比对四环节(逆向对齐/真实小图/LoRA/合成)的输入指纹与算法版本号,生成全局执行计划:没变的秒级跳过,合成小图还能"留旧补差",绝不零散探测。</div>
     <div class="term"><b>autotune(自动解算)</b>batch、学习率、worker 数不用人填,代码按显存/CPU 自动算。</div>
   </div>
 </section>
@@ -349,7 +350,7 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
   <div class="flow">
     <div class="fbox grn"><b>① 放置预训练基座</b><small><code class="inl">train/pretrained/</code> 下放入:<br><code class="inl">pretrained.pth.tar</code>(EfficientViT-SAM 分割骨干)<br>+ <code class="inl">FLUX.1-Fill-dev/</code>(生成基座)</small></div>
     <div class="farr">→</div>
-    <div class="fbox grn"><b>② 放入现场原图与标注</b><small>各点位平铺 <code class="inl">*.bmp</code>(OK 与 NG 均入训练池);NG 图旁放同名 <code class="inl">.bmp.tmp</code>;<b>每类缺陷训练池实例 ≥4 个</b>(不足红字退出)</small></div>
+    <div class="fbox grn"><b>② 放入现场原图与标注</b><small>各点位平铺 <code class="inl">*.bmp</code>(OK 与 NG 均入训练池);NG 图旁放同名 <code class="inl">.bmp.tmp</code>;<b>每个 (检测区, 缺陷) 组合实例 ≥4 个</b>(不足红字退出;含极小检测区的点位务必再备 15~20 张该区干净的 OK 底图)</small></div>
     <div class="farr">→</div>
     <div class="fbox grn"><b>③ 放入独立考卷</b><small>每点位建 <code class="inl">val/</code> 子目录,手工放入<br>真实 NG 考卷(<code class="inl">*.bmp</code> + <code class="inl">.bmp.tmp</code>)<br>100% 物理隔离,绝不进训练</small></div>
     <div class="farr">→</div>
@@ -358,16 +359,16 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
 
   <div class="co why">
     <span class="tag">🎯 不用再准备缺陷素材和绑定表了?</span>
-    <p>老版要人工抠 <code class="inl">assets/{缺陷类型}/</code> 素材对、手写 <code class="inl">assets.jsonc</code> 绑定表(哪个分区贴哪类缺陷、尺寸范围多少)。新版把这些<b>全部自动化</b>:真实缺陷小图由阶段 2.3 直接从 NG 原图上抠(<code class="inl">real_patches/</code>),合成缺陷小图由内置 FLUX LoRA 现场量产(<code class="inl">synth_cache/</code>),"哪个分区有哪些缺陷"由<b>分区蒙版 ∩ 标注多边形</b>的重叠面积自动归属,"贴多大、多深"由训练池<b>实测统计</b>自适应——人只剩"放原图、画分区"两件事,连数量参数都没有。</p>
+    <p>老版要人工抠 <code class="inl">assets/{缺陷类型}/</code> 素材对、手写 <code class="inl">assets.jsonc</code> 绑定表(哪个分区贴哪类缺陷、尺寸范围多少)。新版把这些<b>全部自动化</b>:真实小缺陷图直接从 NG 原图上抠(<code class="inl">patches/…/real_*.png</code>),合成小缺陷图由内置 FLUX LoRA 现场量产(<code class="inl">patches/…/synth_*.png</code>),"哪个检测区有哪些缺陷"由<b>圆滑有效检测区 ∩ 标注多边形</b>的交集面积自动归属,"贴多大、多深"由训练池<b>实测统计</b>自适应——人只剩"放原图、画分区"两件事,连数量参数都没有。</p>
   </div>
 
   <h3>规格全自动测算:auto_zones.json 代替 assets.jsonc</h3>
-  <p>启动后阶段 2.4 会为每种缺陷自动算一份<b>实测规格</b>(存 <code class="inl">.tmp/{产品}/auto_zones.json</code>,即代码里的 mat.assets_cfg),造题全部照它执行:</p>
+  <p>启动后系统会为每个 <b>{检测区}/{缺陷}</b> 组合自动算一份<b>实测规格</b>(存 <code class="inl">.tmp/{产品}/auto_zones.json</code>,即代码里的 mat.assets_cfg),造题全部照它执行:</p>
   <ul>
     <li><b>面积规格</b> [min, max, med]:全部真实实例面积的 <b>p2 分位 ×0.75 ~ p98 分位 ×1.30</b>(下限保底 18px),中位数 med 夹在区间内;</li>
-    <li><b>对比度分布</b> [diff_lo, diff_hi]:外扩 2~7px 干净环带测出的 |缺陷−背景| 的 <b>p10 ×0.8(夹 16~42)~ p90 ×1.15(夹 55~195)</b>;</li>
-    <li><b>贴边率</b> b_prob:实测"距分区边界 ≤8px 的实例占比",夹在 <span class="kn">0.30~0.65</span>——决定造题时贴边/居中的比例;</li>
-    <li><b>分区绑定</b>:同名检测分区(如都叫"加工面")跨点位、跨 <code class="inl">--reuse</code> 产品共享同几种缺陷的规格与素材。</li>
+    <li><b>对比度分布</b> [diff_lo, diff_med, diff_hi]:外扩 2~7px 干净环带测出的 |缺陷−背景| 的 <b>p10 ×0.85(下限 16)~ 与「diff_lo×1.35 和 p90×1.15 取大」(上限 195)</b>,中位数 diff_med 一并记录;</li>
+    <li><b>明暗极性</b> polarity:实测该组缺陷整体<b>偏暗 / 偏亮 / 混合</b>——造题贴图时保持原生明暗方向(暗坑不画成亮斑);落位固定<b>区内 / 区边缘五五分</b>(50%/50%);</li>
+    <li><b>归档粒度</b>:所有规格、真实与合成小图统一按 <b>{产品}/{检测区}/{缺陷}</b> 三级目录管理——同名检测区(如都叫"加工面")跨点位、跨 <code class="inl">--reuse</code> 产品合并共享。</li>
   </ul>
 
   <figure class="fig">
@@ -387,9 +388,9 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
       <text x="50" y="224" class="tm" fill="#b45309">② 外扩 2~7px 干净环带 → 背景中值</text>
       <line x1="100" y1="212" x2="114" y2="198" class="lead"/>
 
-      <line x1="170" y1="152" x2="318" y2="152" stroke="#64748b" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ah1)" marker-start="url(#ah1)"/>
-      <text x="246" y="140" text-anchor="middle" class="tm">③ 量到分区边界的最近距离</text>
-      <text x="246" y="172" text-anchor="middle" class="tm" fill="#b45309">≤8px → 记一颗"贴边住户"</text>
+      <rect x="185" y="132" width="142" height="44" rx="8" fill="#fdf6e3" stroke="#f0e2b6"/>
+      <text x="256" y="150" text-anchor="middle" class="tm">③ 缺陷 vs 环带背景:</text>
+      <text x="256" y="168" text-anchor="middle" class="tm" fill="#b45309">偏暗 / 偏亮 → 记"极性"</text>
 
       <rect x="360" y="46" width="295" height="62" rx="9" fill="#fdf0e7" stroke="#e7b58a" stroke-width="1.8"/>
       <text x="374" y="70" class="tb">① 个头 → 面积(px)</text>
@@ -401,17 +402,17 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
       <text x="374" y="182" class="tm">只在检测区内;太浅 &lt;6 的实例不采信)</text>
 
       <rect x="360" y="204" width="295" height="58" rx="9" fill="#e9f6ee" stroke="#86d3a1" stroke-width="1.8"/>
-      <text x="374" y="228" class="tb">③ 位置 → 贴边标记</text>
-      <text x="374" y="250" class="tm">到分区边界最近距离 ≤8px 记"贴边",否则"居中"</text>
+      <text x="374" y="228" class="tb">③ 明暗 → 极性标记</text>
+      <text x="374" y="250" class="tm">整颗偏暗记 −1 / 偏亮记 +1 / 混合记 0——贴图保持明暗方向</text>
 
       <line x1="152" y1="118" x2="356" y2="77" class="lead"/>
       <line x1="182" y1="170" x2="356" y2="156" class="lead"/>
-      <line x1="290" y1="162" x2="356" y2="233" class="lead"/>
+      <line x1="330" y1="178" x2="356" y2="233" class="lead"/>
 
       <rect x="25" y="276" width="630" height="24" rx="8" fill="#fbfaf6" stroke="#d8d2c0"/>
-      <text x="340" y="293" text-anchor="middle" class="tm">体检全在照片原生像素上做(阶段 2.3,未经对齐插值)——量的是"原汁原味"的真缺陷,三个数逐颗记进台账</text>
+      <text x="340" y="293" text-anchor="middle" class="tm">体检全在照片原生像素上做(零插值、零修补)——量的是"原汁原味"的真缺陷,三个数逐颗记进台账</text>
     </svg>
-    <figcaption>第一步(量什么):阶段 2.3 在照片原生像素上给每颗真缺陷量三样——<b>① 面积</b> = 标注多边形内的像素数;<b>② 对比度</b> = 缺陷亮度与"外扩 2~7px 干净环带"背景中值之差(环带自动避开邻近其他标注、只取检测区内,取该颗差值的八成位记为深浅,太浅的实例不采信);<b>③ 贴边标记</b> = 到分区边界最近距离 ≤8px 记"贴边"。这三列就是规格单的原始数据。</figcaption>
+    <figcaption>第一步(量什么):系统在照片原生像素上给每颗真缺陷量三样——<b>① 面积</b> = 标注多边形内的像素数;<b>② 对比度</b> = 缺陷亮度与"外扩 2~7px 干净环带"背景中值之差(环带自动避开邻近其他标注、只取有效检测区内,取该颗差值的八成位记为深浅,太浅的实例不采信);<b>③ 极性</b> = 整颗缺陷相对背景偏暗 / 偏亮 / 混合。这三列就是规格单的原始数据。</figcaption>
   </figure>
 
   <figure class="fig">
@@ -458,21 +459,21 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
       <text x="599" y="214" text-anchor="middle" class="t">[diff_lo, diff_hi]</text>
       <text x="599" y="236" text-anchor="middle" class="tm">例 [22, 120]</text>
 
-      <text x="25" y="286" class="tb">③ 贴边率:数一数多少颗住在"边上"</text>
+      <text x="25" y="286" class="tb">③ 极性:数一数暗颗多还是亮颗多</text>
       <g>
-        <circle cx="70" cy="310" r="5" fill="#b45309"/><circle cx="90" cy="310" r="5" fill="#b45309"/>
-        <circle cx="110" cy="310" r="5" fill="#b45309"/><circle cx="130" cy="310" r="5" fill="#b45309"/>
-        <circle cx="150" cy="310" r="5" fill="#15803d"/><circle cx="170" cy="310" r="5" fill="#15803d"/>
-        <circle cx="190" cy="310" r="5" fill="#15803d"/><circle cx="210" cy="310" r="5" fill="#15803d"/>
-        <circle cx="230" cy="310" r="5" fill="#15803d"/><circle cx="250" cy="310" r="5" fill="#15803d"/>
+        <circle cx="70" cy="310" r="5" fill="#6b675e"/><circle cx="90" cy="310" r="5" fill="#6b675e"/>
+        <circle cx="110" cy="310" r="5" fill="#6b675e"/><circle cx="130" cy="310" r="5" fill="#6b675e"/>
+        <circle cx="150" cy="310" r="5" fill="#6b675e"/><circle cx="170" cy="310" r="5" fill="#6b675e"/>
+        <circle cx="190" cy="310" r="5" fill="#6b675e"/><circle cx="210" cy="310" r="5" fill="#f59e0b"/>
+        <circle cx="230" cy="310" r="5" fill="#f59e0b"/><circle cx="250" cy="310" r="5" fill="#f59e0b"/>
       </g>
-      <text x="160" y="336" text-anchor="middle" class="tm">橙=贴边(≤8px) · 绿=居中 → 4/10 = 40%</text>
+      <text x="160" y="336" text-anchor="middle" class="tm">深=偏暗 · 浅=偏亮 → 7/10 偏暗</text>
       <path d="M 272,310 L 320,310" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
       <rect x="326" y="288" width="330" height="54" rx="9" fill="#e9f6ee" stroke="#86d3a1" stroke-width="1.8"/>
-      <text x="491" y="310" text-anchor="middle" class="t">夹在 0.30 ~ 0.65 → b_prob = 0.40</text>
-      <text x="491" y="330" text-anchor="middle" class="tm">造题时按这个概率贴边,其余停居中/开阔处</text>
+      <text x="491" y="310" text-anchor="middle" class="t">polarity = 偏暗(贴图保持暗方向)</text>
+      <text x="491" y="330" text-anchor="middle" class="tm">落位固定:区内 / 区边缘 五五分(50/50)</text>
 
-      <text x="25" y="378" class="tb">④ 分区绑定:同名分区,共用一张规格单</text>
+      <text x="25" y="378" class="tb">④ 归档粒度:{产品}/{检测区}/{缺陷} 一组一档</text>
       <rect x="25" y="392" width="190" height="42" rx="8" fill="#fbfaf6" stroke="#d8d2c0" stroke-width="1.5"/>
       <text x="120" y="418" text-anchor="middle" class="tm">JXFB-1-P1 · 加工面</text>
       <rect x="225" y="392" width="190" height="42" rx="8" fill="#fbfaf6" stroke="#d8d2c0" stroke-width="1.5"/>
@@ -483,23 +484,23 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
       <path d="M 320,434 C 320,448 330,448 336,454" fill="none" stroke="#8a8477" stroke-width="1.4"/>
       <path d="M 520,434 C 520,452 380,448 360,454" fill="none" stroke="#8a8477" stroke-width="1.4" marker-end="url(#ah1)"/>
       <rect x="25" y="456" width="630" height="40" rx="9" fill="#f3eefe" stroke="#ddd3f8" stroke-width="1.8"/>
-      <text x="340" y="474" text-anchor="middle" class="t">都叫「加工面」= 同一种地盘 → 跨点位、跨 --reuse 产品共享同一份规格与素材</text>
-      <text x="340" y="490" text-anchor="middle" class="tm">(每颗缺陷归哪个分区?看它与哪个分区的重叠面积最大——见 7.2 第 1 步)</text>
+      <text x="340" y="474" text-anchor="middle" class="t">同名「加工面」= 同一种地盘 → 跨点位、跨 --reuse 合并成一组,共用规格、小图池与专属 LoRA</text>
+      <text x="340" y="490" text-anchor="middle" class="tm">(每颗缺陷归哪个区?看它与哪个"圆滑有效检测区"的交集面积最大——见 7.2 第 1 步)</text>
     </svg>
-    <figcaption>第二步(怎么汇总):面积与对比度都是"全部实例排一排,掐掉两头最极端的,再适度放宽"——min = p2×0.75(下限保底 18px,上限保底 ≥min×1.5)、max = p98×1.30;diff_lo = p10×0.8 夹进 [16,42]、diff_hi = p90×1.15 夹进 [55,195]。贴边率 = 贴边实例占比,夹在 0.30~0.65。分区绑定按"同名分区"归堆:跨点位、跨 --reuse 产品共享同一份规格与素材。</figcaption>
+    <figcaption>第二步(怎么汇总):面积与对比度都是"全部实例排一排,掐掉两头最极端的,再适度放宽"——min = p2×0.75(下限保底 18px,上限保底 ≥min×1.5)、max = p98×1.30;diff_lo = p10×0.85(下限 16)、diff_hi 与「diff_lo×1.35 和 p90×1.15 取大」(上限 195)。极性按暗亮占比定方向,落位固定区内/区边缘五五分。归档按 {产品}/{检测区}/{缺陷}:同名检测区跨点位、跨 --reuse 合并成一组,共用规格、小图池与专属 LoRA。</figcaption>
   </figure>
 
   <div class="co plain">
     <span class="tag">💡 大白话:为什么要"掐头去尾"?</span>
-    <p>给全班订校服,不能按个子最高的篮球生和最矮的同学定尺寸——区间会被撑爆。所以先把两头最极端的各掐掉一小撮(百分位 p2/p98 就是"排序后第 2%、98% 位置的值",一百颗里排第 2 名和第 98 名的水平),区间立刻回到"正常人群";再各放宽一档(下端 ×0.75、上端 ×1.30),给少数天生偏大偏小的真缺陷留件能穿的衣服;最后的"夹逼"(面积下限 18、对比度 16~42 / 55~195)是双保险——实例太少、量得不稳时,区间既不会塌成一点,也不会飞出物理合理的范围。</p>
+    <p>给全班订校服,不能按个子最高的篮球生和最矮的同学定尺寸——区间会被撑爆。所以先把两头最极端的各掐掉一小撮(百分位 p2/p98 就是"排序后第 2%、98% 位置的值",一百颗里排第 2 名和第 98 名的水平),区间立刻回到"正常人群";再各放宽一档(下端 ×0.75、上端 ×1.30),给少数天生偏大偏小的真缺陷留件能穿的衣服;最后的"夹逼"(面积下限 18、对比度 16~195)是双保险——实例太少、量得不稳时,区间既不会塌成一点,也不会飞出物理合理的范围。</p>
   </div>
   <div class="co plain">
     <span class="tag">💡 大白话</span>
-    <p>这张"规格单"不是人写的,是程序<b>量出来的</b>:把训练池里每个真缺陷量一遍个头(面积)、深浅(对比度)、住得离边多近(贴边率),按百分位折出合理区间——真实缺陷多大,合成题就贴多大;真实多深,贴出来就多深。新标一批缺陷照片,下次启动规格自动刷新,无需任何手动维护。</p>
+    <p>这张"规格单"不是人写的,是程序<b>量出来的</b>:把训练池里每个真缺陷量一遍个头(面积)、深浅(对比度)、明暗方向(极性),按百分位折出合理区间——真实缺陷多大,合成题就贴多大;真实多深,贴出来就多深;真实偏暗,贴出来绝不发亮。新标一批缺陷照片,下次启动规格自动刷新,无需任何手动维护。</p>
   </div>
   <div class="co warn">
     <span class="tag">⚠️ 两个易错点</span>
-    <p>① 判一张图是不是 NG(带缺陷),看的是 <code class="inl">.tmp</code> 里有没有 label ≠ "排除" 的多边形——只标了「排除」的图算 OK 干净图(但「排除」区在训练中同样会被 255 屏蔽并修补,见 8.8);② <b>每种缺陷在训练池(含 --reuse 复用产品)的有效实例必须 ≥4 个</b>——不足时启动即红字退出,因为规格测算和 LoRA 训练都撑不起来。</p>
+    <p>① 判一张图是不是 NG(带缺陷),看的是 <code class="inl">.tmp</code> 里有没有 label ≠ "排除" 的多边形——只标了「排除」的图算 OK 干净图(「排除」区在考试计分时同样从有效检测区中扣除);② <b>每个 (检测区, 缺陷) 组合的训练池实例(含 --reuse 复用)必须 ≥4 个</b>——全局每类缺陷也要 ≥4;不足时启动即红字退出,因为规格测算和每个组合一支的专属 LoRA 都撑不起来。</p>
   </div>
 
 </section>
@@ -511,41 +512,43 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
 
   <p><code class="inl">datasets/</code>(产品素材库,机器只读)与 <code class="inl">train/</code>(代码与机器产物)<b>平级摆放</b>:</p>
   <pre class="tree"><span class="d">supervised_apps/</span>
- <span class="d">├─ datasets/</span>                          <span class="a"># 【产品素材库 · 不进 GitLab · 机器只读 · 零 assets 目录】</span>
+ <span class="d">├─ datasets/</span>                          <span class="a"># 【产品素材库 · 只读不修改 · 不进 GitLab】</span>
  │   <span class="d">└─ {产品}/</span>                        <span class="a"># 例如 HT12/ (一产品一目录,内含各点位子目录)</span>
  │       <span class="d">└─ {点位}/</span>                    <span class="a"># 点位目录 (如 JXFB-1-P1/)</span>
  │           <span class="d">├─</span> <span class="f">{基准图名}.json</span>        <span class="a"># define_masks 产出的分区定义 (代码生成 · 标准 JSON)</span>
- │           <span class="d">├─</span> <span class="f">*.bmp (+ *.bmp.tmp)</span>    <span class="a"># 顶层平铺训练池原图 (OK 图 + 带标注 NG 图)</span>
+ │           <span class="d">├─</span> <span class="f">*.bmp (+ *.bmp.tmp)</span>    <span class="a"># 训练池原图 (80% 训练底图 + 20% 早停集,每点位早停 ≤10 张)</span>
  │           <span class="d">└─ val/</span>                   <span class="k"># 【独立考卷子目录】手工标注 NG 考卷 (*.bmp + *.bmp.tmp)</span>
- │
+ <span class="d">│</span>
  <span class="d">└─ train/</span>                             <span class="a"># 【训练仓库】</span>
      <span class="d">├─ config/app_config.jsonc</span>        <span class="a"># 全局常量 (人工维护 · JSONC): seed / tile_size / web_port / LoRA 参数</span>
      <span class="d">├─ pretrained/</span>                    <span class="a"># 第三方预训练基座 (权重不进 GitLab, 见 pretrained/README.md)</span>
-     │   <span class="d">├─</span> <span class="f">pretrained.pth.tar</span>      <span class="a">#   EfficientViT-SAM-L1 分割骨干权重</span>
-     │   <span class="d">└─</span> <span class="f">FLUX.1-Fill-dev/</span>       <span class="a">#   FLUX.1-Fill-dev 局部重绘生成基座</span>
-     <span class="d">├─ src/train/</span>                     <span class="a"># 训练与监控引擎代码 (18 个模块)</span>
-     <span class="d">├─ .tmp/{产品}/</span>                   <span class="a"># 机器缓存区 (对齐/归属/配额/净化增量缓存跨会话保留)</span>
-     │   <span class="d">├─</span> <span class="f">checkup_cache.pkl</span>        <span class="a">#   阶段 1 素材体检增量缓存</span>
-     │   <span class="d">├─ align.json + aligncache/</span>     <span class="a">#   阶段 2.1 对齐矩阵 H / 对齐底图 / 5.1 净化底图 (.clean.png)</span>
-     │   <span class="d">├─</span> <span class="f">real_patches/{缺陷}/</span>    <span class="a">#   阶段 2.3 抠出的真实缺陷小图与掩码 (供 3.3 形变模板与 5.2.1 贴图)</span>
-     │   <span class="d">├─ auto_zones_cache.pkl + auto_zones.json</span>  <span class="a">#   阶段 2.3~2.4 归属与实测规格缓存</span>
-     │   <span class="d">├─ synth_cache/{缺陷}/{点位}__{分区}/</span>  <span class="a">#   阶段 3.3 合成缺陷小图缓存 (非 512)</span>
-     │   <span class="d">├─</span> <span class="f">budget_cache.pkl</span>        <span class="a">#   阶段 4 分卷 / 切块网格 / 样本配额缓存</span>
-     │   <span class="d">├─ lora_work/{缺陷}/</span>           <span class="a">#   阶段 3 LoRA 训练中间产物</span>
-     │   <span class="d">└─ align_failed/{点位}/ + web/</span>  <span class="a">#   对齐失败隔离区 (moved.jsonl) / 监控网页状态</span>
-     <span class="d">└─ models/{产品}/</span>                 <span class="k"># 最终交付物 (best/deploy 每次清空重来;lora/ 生成模型保留)</span>
-         <span class="d">├─ lora/{缺陷名}/</span>               <span class="a">#   缺陷生成模型 (lora_weights.safetensors + manifest.json;形变模板直接用 real_patches 掩码)</span>
+     <span class="d">│   ├─</span> <span class="f">pretrained.pth.tar</span>      <span class="a">#   EfficientViT-SAM-L1 分割骨干权重</span>
+     <span class="d">│   └─</span> <span class="f">FLUX.1-Fill-dev/</span>       <span class="a">#   FLUX.1-Fill-dev 局部重绘生成基座</span>
+     <span class="d">├─ src/train/</span>                     <span class="a"># 核心源码 (checkup / prep_plan / align / budget / lora_synth / assets / dataset / exam / web …)</span>
+     <span class="d">├─ .tmp/{产品}/</span>                   <span class="a"># 【前置中间产物 (指纹匹配自动复用) + 单次会话运行态 (就绪后归档)】</span>
+     │   <span class="d">├─</span> <span class="f">prep_fingerprints.json</span>  <span class="a">#   开局全局前置步骤跳过检测的校验指纹</span>
+     │   <span class="d">├─</span> <span class="f">align.json</span>             <span class="a">#   各图逆向对齐矩阵 H + 压缩(zb64)有效检测区 RLE</span>
+     │   <span class="d">├─</span> <span class="f">align_failed/</span>          <span class="a">#   对齐失败图隔离区 (moved.jsonl)</span>
+     │   <span class="d">├─</span> <span class="f">auto_zones.json</span>        <span class="a">#   各 {检测区}/{缺陷} 实测规格 (面积/对比度/极性)</span>
+     │   <span class="d">├─</span> <span class="f">real_records.json</span>      <span class="a">#   真实小缺陷图元数据 (支持秒级跳过重裁)</span>
+     │   <span class="d">├─</span> <span class="f">lora/{检测区}/{缺陷}/</span> <span class="a">#   阶段 1:每个组合一支专属 LoRA (训练切块 / 潜变量 / 权重)</span>
+     │   <span class="d">├─</span> <span class="f">patches/{检测区}/{缺陷}/</span><span class="a">#   阶段 2:真实 (real_*) 与合成 (synth_*) 去背景小缺陷图池</span>
+     │   <span class="d">├─</span> <span class="f">base.pth</span>               <span class="a">#   阶段 3 起步权重备份</span>
+     │   <span class="d">├─</span> <span class="f">ep*/ , latest/ , sample/</span><span class="a">#   各轮过程权重 / 最新权重 / 贴图抽检样本</span>
+     │   <span class="d">├─</span> <span class="f">logs/  , web/</span>           <span class="a">#   训练日志 / 8300 监控页状态 (status.json / ng.json)</span>
+     <span class="d">│   └─ _archive/{产品}_{时间戳}/</span>   <span class="a">#   上次会话运行态归档 (留最近 3 份)</span>
+     <span class="d">└─ models/{产品}/</span>                 <span class="k"># 最终交付物 (前置全部成功后才归档旧版重建)</span>
          <span class="d">├──</span> <span class="f">best_int{交集}_ep{轮}.pth</span>  <span class="k"># 唯一最优模型权重</span>
-         <span class="d">└── deploy/</span>                  <span class="k"># 推理要素包 (按点位子目录隔离 + manifest.json)</span></pre>
+         <span class="d">└── deploy/</span>                  <span class="k"># 推理要素包 (manifest.json + tile_size.txt + 点位基准图与分区定义)</span></pre>
 
   <div class="co warn">
-    <span class="tag">⚠️ 每次启动都是"全新会话",但缓存会留下</span>
-    <p>开训前程序会<b>清空 models/{产品}/ 里的分割交付物</b>(上一次的 best 权重与 deploy/ 不保留;<b>阶段 3 训好的 lora/ 生成模型保留</b>,标注没变就不重训),并把 <code class="inl">.tmp/{产品}/</code> 整体挪进归档、<b>只留最近 3 份</b>(连续重启也不会链式吞掉历史)。但归档时会<b>特意保留五类增量缓存</b>(体检 / 对齐 / 归属 / 配额 / 净化,连同 real_patches 与 synth_cache)——只要图片、标注、分区定义没改,第二次启动阶段 1~5.1 全部<b>秒级跳过</b>,直接进分割训练。轮号永远从 1 重新计;想要"接着上次的练"?用 <code class="inl">--base</code> 指向上次的 best 权重做迁移精调。</p>
+    <span class="tag">⚠️ 每次启动都是"全新会话",但前置成果会留下</span>
+    <p>启动后程序先把上次会话的<b>运行态</b>(ep*/latest/sample/web/logs)归档进 <code class="inl">.tmp/_archive/</code>、只留最近 3 份;而<b>前置中间产物(align.json / patches/ / lora/ / prep_fingerprints.json)原样保留</b>——开局指纹检测比对没变的部分秒级跳过,合成小图还能"留旧补差"。<b>models/{产品}/ 要等体检与全部前置成功后才归档旧版重建</b>:中途任何一步报错,上一版交付的 best 完好无损。轮号永远从 1 重新计、阶段 3 从 0 完整训练;想要"接着上次的练"?用 <code class="inl">--base</code> 指向上次的 best 权重做迁移精调。</p>
   </div>
 
   <div class="co plain">
     <span class="tag">💡 大白话:档案柜与草稿纸</span>
-    <p><code class="inl">models/</code> 是只放成品的<b>档案柜</b>——而且永远只留一件最好的(best),换新的删旧的;<code class="inl">.tmp/</code> 是<b>草稿纸篓</b>——对齐缓存、逐轮权重、日志随手扔,整篓倒掉也不心疼(旧篓还会自动归档留 3 篓备查)。正因如此,每次开新会话才敢"清空重来"。</p>
+    <p><code class="inl">models/</code> 是只放成品的<b>档案柜</b>——而且永远只留一件最好的(best),换新的删旧的;<code class="inl">.tmp/</code> 是<b>草稿纸篓</b>——逐轮权重、日志这类"单次会话运行态"随手扔,旧篓自动归档留 3 篓备查;而对齐台账、小图池、LoRA 权重这些<b>前置成果</b>留在篓外,跨会话复用。正因如此,每次开新会话才敢"清空重来"。</p>
   </div>
 
   <h3>3.1 config/app_config.jsonc(全局常量,人工维护)</h3>
@@ -604,13 +607,13 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
 <!-- ================= 第 4 章 ================= -->
 <section id="pipeline">
   <div class="chap"><span class="chapno">第 4 章</span><h2>训练事件线总览:一条命令的旅程</h2></div>
-  <div class="chapref">对应 README §三「训练事件线(全景树)」</div>
+  <div class="chapref">对应 README §一「宏观大流程」:五件核心大事</div>
 
-  <p>敲下 <code class="inl">uv run train</code>,程序自动走完五段旅程(标 <b>⚡</b> 的阶段带增量缓存——素材没改就秒级跳过,直接进阶段 5)。先看全景图,再逐站配图细看:</p>
+  <p>敲下 <code class="inl">uv run train</code>,程序自动走完五件大事(标 <b>⚡</b> 的环节带开局指纹检测——素材没变就秒级跳过)。先看全景图,再逐站配图细看:</p>
 
   <figure class="fig">
-    <svg viewBox="0 0 680 516" role="img" aria-label="五段旅程总览:命令进入后依次经过体检、对齐抠图、LoRA合成、分卷配额、训练考试五站,右列为每站产出,左侧绿色快道表示素材没改时1到4与5.1秒级跳过直达训练">
-      <text x="340" y="22" text-anchor="middle" class="tb">一条命令的五段旅程总览(⚡ = 带增量缓存)</text>
+    <svg viewBox="0 0 680 516" role="img" aria-label="五段旅程总览:命令进入后依次经过体检与逆向对齐、阶段1 LoRA训练、阶段2小图池、统一预算与阶段3分割训练、考卷验收五站,右列为每站产出,左侧绿色快道表示指纹没变时前置环节秒级跳过直达训练">
+      <text x="340" y="22" text-anchor="middle" class="tb">一条命令的五段旅程总览(⚡ = 开局指纹检测,没变就跳过)</text>
 
       <rect x="140" y="36" width="220" height="34" rx="8" fill="#0f172a"/>
       <text x="250" y="58" text-anchor="middle" fill="#7dd3fc" font-size="13.5" font-family="Consolas,'Courier New',monospace">uv run train</text>
@@ -618,56 +621,56 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
 
       <circle cx="80" cy="122" r="13" fill="#15803d"/><text x="80" y="126.5" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">1</text>
       <rect x="60" y="90" width="380" height="64" rx="10" fill="#eaf2fe" stroke="#93b4f5" stroke-width="1.8"/>
-      <text x="100" y="115" class="tb">① ⚡ 素材体检 · checkup.py</text>
-      <text x="100" y="137" class="tm">证件逐项核验,每类缺陷 ≥4 个才放行</text>
+      <text x="100" y="115" class="tb">① ⚡ 素材体检与逆向精对齐</text>
+      <text x="100" y="137" class="tm">每个 (检测区,缺陷) ≥4;分区逆向投射 + ±10px 边缘吸附</text>
       <line x1="442" y1="122" x2="450" y2="122" class="lead"/>
       <rect x="452" y="96" width="203" height="52" rx="8" fill="#fbfaf6" stroke="#d8d2c0" stroke-width="1.4"/>
-      <text x="553" y="126" text-anchor="middle" class="tm">素材索引(体检缓存)</text>
+      <text x="553" y="126" text-anchor="middle" class="tm">align.json(H + 有效检测区)</text>
 
       <circle cx="80" cy="204" r="13" fill="#15803d"/><text x="80" y="208.5" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">2</text>
       <rect x="60" y="172" width="380" height="64" rx="10" fill="#eaf2fe" stroke="#93b4f5" stroke-width="1.8"/>
-      <text x="100" y="197" class="tb">② ⚡ 对齐 + 真实缺陷小图 · align.py</text>
-      <text x="100" y="219" class="tm">原图搬回基准系;零失真抠出真实小图</text>
+      <text x="100" y="197" class="tb">② ⚡ 阶段 1:LoRA 生成训练</text>
+      <text x="100" y="219" class="tm">每个 {检测区}/{缺陷} 一支专属 LoRA(凑 60 块起步)</text>
       <line x1="442" y1="204" x2="450" y2="204" class="lead"/>
       <rect x="452" y="178" width="203" height="52" rx="8" fill="#fbfaf6" stroke="#d8d2c0" stroke-width="1.4"/>
-      <text x="553" y="208" text-anchor="middle" class="tm">对齐缓存 + real_patches/</text>
+      <text x="553" y="208" text-anchor="middle" class="tm">.tmp/lora/{检测区}/{缺陷}/</text>
 
       <circle cx="80" cy="286" r="13" fill="#15803d"/><text x="80" y="290.5" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">3</text>
       <rect x="60" y="254" width="380" height="64" rx="10" fill="#eaf2fe" stroke="#93b4f5" stroke-width="1.8"/>
-      <text x="100" y="279" class="tb">③ ⚡ LoRA 合成小图 · lora_synth.py</text>
-      <text x="100" y="301" class="tm">学真缺陷的样子,量产合成缺陷小图</text>
+      <text x="100" y="279" class="tb">③ ⚡ 阶段 2:小缺陷图池</text>
+      <text x="100" y="301" class="tm">真实抠取 + LoRA 合成,统一 8px + 中值去背景</text>
       <line x1="442" y1="286" x2="450" y2="286" class="lead"/>
       <rect x="452" y="260" width="203" height="52" rx="8" fill="#fbfaf6" stroke="#d8d2c0" stroke-width="1.4"/>
-      <text x="553" y="290" text-anchor="middle" class="tm">lora/ 权重 + synth_cache/</text>
+      <text x="553" y="290" text-anchor="middle" class="tm">patches/{区}/{缺陷}/ 双源小图</text>
 
       <circle cx="80" cy="368" r="13" fill="#15803d"/><text x="80" y="372.5" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">4</text>
       <rect x="60" y="336" width="380" height="64" rx="10" fill="#eaf2fe" stroke="#93b4f5" stroke-width="1.8"/>
-      <text x="100" y="361" class="tb">④ ⚡ 分卷与切块配额 · budget.py</text>
-      <text x="100" y="383" class="tm">8:2 分卷 + 512 网格 + 正负 1:1 配额</text>
+      <text x="100" y="361" class="tb">④ ⚡ 统一预算 + 阶段 3:分割训练</text>
+      <text x="100" y="383" class="tm">√(T×D) 注水配额 · 原图干净切块 · 牌靴贴图</text>
       <line x1="442" y1="368" x2="450" y2="368" class="lead"/>
       <rect x="452" y="342" width="203" height="52" rx="8" fill="#fbfaf6" stroke="#d8d2c0" stroke-width="1.4"/>
-      <text x="553" y="372" text-anchor="middle" class="tm">切块网格 + 均衡配额表</text>
+      <text x="553" y="372" text-anchor="middle" class="tm">正负 1:1 训练块(ep*/ 过程权重)</text>
 
       <circle cx="80" cy="450" r="13" fill="#c2410c"/><text x="80" y="454.5" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">5</text>
       <rect x="60" y="418" width="380" height="64" rx="10" fill="#fdf0e7" stroke="#e7b58a" stroke-width="2"/>
-      <text x="100" y="443" class="tb">⑤ 训练 + 考试验收 · 每轮必跑</text>
-      <text x="100" y="465" class="tm">净化底图 → 在线贴题训练 → 早停 → 考试选 best</text>
+      <text x="100" y="443" class="tb">⑤ 考卷验收交付 · 每轮必跑</text>
+      <text x="100" y="465" class="tm">val/ 考卷圆滑区整图推理 → 综合质量分选 best</text>
       <line x1="442" y1="450" x2="450" y2="450" class="lead"/>
       <rect x="452" y="424" width="203" height="52" rx="8" fill="#fdf6e3" stroke="#f0e2b6" stroke-width="1.8"/>
       <text x="553" y="448" text-anchor="middle" class="tb" fill="#b45309">best 权重</text>
       <text x="553" y="466" text-anchor="middle" class="tm" fill="#b45309">+ deploy/ 推理包(唯一交付物)</text>
 
       <path d="M 140,53 L 34,53 L 34,450 L 56,450" fill="none" stroke="#15803d" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#ah1)"/>
-      <text transform="rotate(-90 20 252)" x="20" y="252" text-anchor="middle" fill="#15803d" font-size="11">第二次启动:素材没改 → ①~④ 与 5.1 秒级跳过,直达训练</text>
+      <text transform="rotate(-90 20 252)" x="20" y="252" text-anchor="middle" fill="#15803d" font-size="11">第二次启动:指纹没变 → ①~③ 秒级跳过(合成可留旧补差),直达训练</text>
 
-      <text x="340" y="504" text-anchor="middle" class="tm">右列 = 每站产出的"家当",全部落盘缓存——复跑时只补缺的部分</text>
+      <text x="340" y="504" text-anchor="middle" class="tm">右列 = 每站产出的"家当";models/ 等前置全部成功后才归档旧版重建——中途报错,上一版 best 完好</text>
     </svg>
-    <figcaption>五段旅程总览:① 体检放行 → ② 对齐并抠出真实缺陷小图 → ③ LoRA 学画假缺陷 → ④ 分卷与切块配额 → ⑤ 每轮"造题→训练→验证→考试"循环,考得最好的一轮交付 best + deploy/。①~④ 与 5.1 带 ⚡ 增量缓存:素材、标注、分区没改动时,第二次启动沿左侧绿色快道秒级跳过,直接进入训练。</figcaption>
+    <figcaption>五段旅程总览:① 体检放行 + 逆向精对齐(分区投射到每张照片并 ±10px 吸附成"有效检测区")→ ② 每个 {检测区}/{缺陷} 训一支专属 LoRA → ③ 建"真实 + 合成"双源小图池 → ④ 统一注水预算下,原图干净切块、牌靴贴题训练 → ⑤ 每轮 val/ 考卷考试,综合质量分最高的一轮交付 best + deploy/。①~③ 带开局指纹检测:素材、标注、分区没改动时,第二次启动沿左侧绿色快道秒级跳过,直接进入训练。</figcaption>
   </figure>
 
   <div class="steps">
     <div class="stp">
-      <h4>1. ⚡ 素材体检 <code class="inl" style="font-size:13px">checkup.py</code></h4>
+      <h4>1. ⚡ 素材体检 + 开局跳过检测 <code class="inl" style="font-size:13px">checkup.py + prep_plan.py</code></h4>
       <svg viewBox="0 0 560 104" style="width:100%;height:auto;display:block;margin:4px 0 2px" role="img" aria-label="体检小图:各类文件经逐项核验清单,全合格放行,缺件或每类缺陷不足4个红字退出">
         <rect x="18" y="18" width="92" height="22" rx="4" fill="#eaf2fe" stroke="#93b4f5"/>
         <text x="64" y="33" text-anchor="middle" class="tm">{基准图}.json</text>
@@ -683,55 +686,51 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
         <text x="196" y="58" class="tm">同分辨率</text>
         <path d="M168,74 l6,6 l11,-13" stroke="#15803d" stroke-width="2" fill="none"/>
         <text x="196" y="78" class="tm">标注可解析</text>
-        <text x="168" y="96" class="tm" fill="#b45309">每类缺陷 ≥4 个?</text>
+        <text x="168" y="96" class="tm" fill="#b45309">每组合 (区,缺陷) ≥4?</text>
         <path d="M 280,57 L 312,57" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
         <rect x="316" y="16" width="224" height="34" rx="8" fill="#e9f6ee" stroke="#86d3a1"/>
         <text x="428" y="38" text-anchor="middle" class="t" fill="#15803d">全部合格 → 放行进入下一站</text>
         <rect x="316" y="58" width="224" height="34" rx="8" fill="#fdecec" stroke="#f0a5a5"/>
-        <text x="428" y="80" text-anchor="middle" class="t" fill="#b91c1c">缺件 / 某类缺陷 &lt;4 → 红字退出</text>
+        <text x="428" y="80" text-anchor="middle" class="t" fill="#b91c1c">缺件 / 某组合 (区,缺陷) &lt;4 → 红字退出</text>
       </svg>
       <ul>
         <li>校验分区 json(含 domain + ≥1 检测分区)/ 基准图在场 / 全点位同分辨率 / 标注可解析;</li>
-        <li>盘点训练池(根目录 OK+NG)与 <code class="inl">val/</code> 独立考卷,读取 --reuse 复用产品标注;</li>
-        <li><b>每类缺陷训练池实例 ≥4 个</b>,不足红字退出;<b>不合格直接退出,绝不代建</b>。</li>
+        <li>盘点训练池(根目录 OK+NG)与 <code class="inl">val/</code> 独立考卷;体检通过后立刻做<b>开局指纹检测</b>(prep_plan):一次性比对逆向对齐/真实小图/LoRA/合成四环节的输入指纹,没变的直接跳过;</li>
+        <li><b>全局每类缺陷、以及每个 (检测区, 缺陷) 组合的实例都要 ≥4 个</b>,不足红字退出;<b>不合格直接退出,绝不代建</b>。</li>
       </ul>
     </div>
     <div class="stp">
-      <h4>2. ⚡ 对齐与真实缺陷小图抠取 <code class="inl" style="font-size:13px">align.py</code></h4>
-      <svg viewBox="0 0 560 104" style="width:100%;height:auto;display:block;margin:4px 0 2px" role="img" aria-label="对齐小图:几张歪斜照片经单应H换算搬回基准系,并抠出真实缺陷小图">
+      <h4>2. ⚡ 逆向精对齐与真实小图 <code class="inl" style="font-size:13px">align.py</code></h4>
+      <svg viewBox="0 0 560 104" style="width:100%;height:auto;display:block;margin:4px 0 2px" role="img" aria-label="逆向对齐小图:歪的照片原图不动,分区按H逆向投射过去,再经正负10px边缘吸附得到有效检测区">
         <g transform="rotate(-4 60 52)">
           <rect x="18" y="26" width="84" height="56" rx="4" class="metal"/>
           <circle cx="42" cy="44" r="2" fill="#15803d"/><circle cx="66" cy="40" r="2" fill="#15803d"/>
           <circle cx="52" cy="66" r="2" fill="#1e40af"/><circle cx="80" cy="62" r="2" fill="#1e40af"/>
         </g>
-        <g transform="rotate(3 128 52)">
-          <rect x="92" y="30" width="70" height="50" rx="4" class="metal"/>
-          <circle cx="112" cy="46" r="2" fill="#15803d"/><circle cx="134" cy="58" r="2" fill="#1e40af"/>
-        </g>
-        <text x="92" y="100" text-anchor="middle" class="tm">各点位照片(拍得有偏差)</text>
+        <text x="92" y="98" text-anchor="middle" class="tm">照片(💾 原图永不动)</text>
         <path d="M 178,52 L 210,52" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
         <rect x="214" y="24" width="100" height="56" rx="8" fill="#eaf2fe" stroke="#93b4f5" stroke-width="1.8"/>
-        <text x="264" y="48" text-anchor="middle" class="tb">单应 H</text>
-        <text x="264" y="66" text-anchor="middle" class="tm">角点配对解出</text>
+        <text x="264" y="46" text-anchor="middle" class="tb">单应 H</text>
+        <text x="264" y="66" text-anchor="middle" class="tm">分区逆向投射</text>
         <path d="M 322,52 L 354,52" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
         <rect x="358" y="20" width="88" height="62" rx="4" class="metal"/>
-        <ellipse cx="402" cy="50" rx="14" ry="10" class="defect"/>
-        <ellipse cx="402" cy="50" rx="22" ry="15" class="dasho"/>
-        <rect x="452" y="24" width="90" height="28" rx="6" fill="#fdf0e7" stroke="#e7b58a"/>
-        <path d="M488,32 C496,30 503,36 503,44 C503,52 496,56 489,56 C482,56 477,50 479,43 C480,38 483,34 488,32 Z" class="defect"/>
-        <text x="497" y="70" text-anchor="middle" class="tm">real_patches/</text>
-        <text x="497" y="86" text-anchor="middle" class="tm">零失真小图</text>
-        <text x="402" y="98" text-anchor="middle" class="tm">全部搬回基准系(存对齐缓存)</text>
+        <rect x="372" y="32" width="60" height="40" rx="3" fill="none" stroke="#f59e0b" stroke-width="1.4" stroke-dasharray="4 3"/>
+        <path d="M 372,32 h60" stroke="#06b6d4" stroke-width="2.5" fill="none"/>
+        <text x="402" y="98" text-anchor="middle" class="tm">投射(黄虚)→ 吸附(青线)</text>
+        <rect x="456" y="24" width="90" height="28" rx="6" fill="#e9f6ee" stroke="#86d3a1"/>
+        <text x="501" y="42" text-anchor="middle" class="tm" fill="#15803d">有效检测区</text>
+        <text x="501" y="70" text-anchor="middle" class="tm">训练紧贴版</text>
+        <text x="501" y="88" text-anchor="middle" class="tm">推理圆滑版</text>
       </svg>
       <ul>
-        <li>2.1 用 domain 分区角点解算 8 自由度单应 H,全部原图回贴基准系存 aligncache(增量复用);</li>
-        <li>2.2 对齐失败废片成对移入 <code class="inl">align_failed/</code> 隔离并记 moved.jsonl;</li>
-        <li>2.3 分区蒙版投射定归属,<b>完整保留标注轮廓</b>从原图零失真抠出真实缺陷小图(<code class="inl">real_patches/</code>,掩码外统一填分区背景中值);</li>
-        <li>2.4 同名分区跨点位/跨产品汇总,实测每类缺陷的规格(面积/对比度/贴边率)。</li>
+        <li>用 domain 分区角点解算"基准图 → 照片"的单应 H,<b>照片原图一律不动</b>(零透视变形、零净化);</li>
+        <li>分区蒙版按 H <b>逆向投射</b>到每张照片,再经 <b>±10px 边缘吸附</b>得到"有效检测区"(训练用紧贴版,推理/归属用圆滑版);</li>
+        <li>对齐失败图成对移入 <code class="inl">align_failed/</code> 隔离并记 moved.jsonl,红字退出;</li>
+        <li>缺陷按<b>圆滑区最大交集</b>归属 {检测区}/{缺陷},从原图零失真抠出真实小图(外扩 8px + 局部中值去背景),顺带实测规格(面积/对比度/极性)。</li>
       </ul>
     </div>
     <div class="stp">
-      <h4>3. ⚡ 缺陷生成模型训练与合成小图扩增 <code class="inl" style="font-size:13px">lora_synth.py</code></h4>
+      <h4>3. ⚡ 阶段 1 LoRA 训练 + 阶段 2 小图池 <code class="inl" style="font-size:13px">lora_synth.py</code></h4>
       <svg viewBox="0 0 560 104" style="width:100%;height:auto;display:block;margin:4px 0 2px" role="img" aria-label="LoRA合成小图:真实缺陷小图送入FLUX加LoRA学习,量产假缺陷小图">
         <rect x="18" y="26" width="90" height="52" rx="6" fill="#fbfaf6" stroke="#d8d2c0" stroke-width="1.5"/>
         <rect x="30" y="36" width="34" height="32" rx="3" class="metal"/>
@@ -744,7 +743,7 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
         <circle cx="196" cy="54" r="14" fill="none" stroke="#6d28d9" stroke-width="2"/>
         <circle cx="196" cy="54" r="5" fill="#6d28d9"/>
         <text x="262" y="48" text-anchor="middle" class="tb">FLUX.1-Fill + LoRA</text>
-        <text x="262" y="68" text-anchor="middle" class="tm">学画这类缺陷 · 1000 步</text>
+        <text x="262" y="68" text-anchor="middle" class="tm">每组合一支 · 1000 步</text>
         <path d="M 342,52 L 374,52" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
         <rect x="380" y="24" width="52" height="36" rx="5" fill="#fbfaf6" stroke="#d8d2c0"/>
         <path d="M402,34 C412,32 420,40 420,48 C420,57 411,61 403,61 C395,61 390,54 392,46 C394,39 397,35 402,34 Z" class="defect"/>
@@ -752,16 +751,16 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
         <path d="M460,50 C468,44 478,48 478,56 C478,64 468,66 463,63 C458,60 456,54 460,50 Z" class="defect"/>
         <rect x="500" y="24" width="52" height="36" rx="5" fill="#fbfaf6" stroke="#d8d2c0"/>
         <ellipse cx="526" cy="42" rx="12" ry="7" class="defect"/>
-        <text x="466" y="94" text-anchor="middle" class="tm">synth_cache/ 假缺陷按配额量产</text>
+        <text x="466" y="94" text-anchor="middle" class="tm">patches/ 真实 + 合成 平权混用</text>
       </svg>
       <ul>
-        <li>3.1 围绕每个真实缺陷裁 1~4 张 512 训练图块(动态 k,上限 240),邻缺陷/排除区抹平;</li>
-        <li>3.2 每类缺陷单独训 FLUX.1-Fill LoRA <span class="kn">1000 步</span>,存 <code class="inl">models/{产品}/lora/{缺陷}/</code>;</li>
-        <li>3.3 按 (点位, 分区) 配额多卡重绘假缺陷,双阈值差分抠出<b>合成缺陷小图</b>(<code class="inl">synth_cache/</code>),最多 3 轮补足。</li>
+        <li>阶段 1:每个 {检测区}/{缺陷} 组合<b>单独训一支专属 LoRA</b>(<span class="kn">1000 步</span>,多卡并行);训练图块围绕真实缺陷裁剪、目标凑 <b>60 张</b>(k=⌈60÷实例数⌉ 夹 1~4,上限 240)——<b>不做任何修补</b>:块内其他标注直接置损失权重 0,目标缺陷直接外扩 8px 软权重(1.0→0.4);</li>
+        <li>阶段 2:真实小图从原图抠取;合成小图按统一预算同源导出的配额 <b>Q_synth = clip(⌈Σ(E÷D)÷5⌉, 60, 600)</b> 用 LoRA 重绘——形状模板取自真实掩码的洗牌轮转 + 随机弹性形变,<b>只在目标产品自己的底图上重绘</b>(--reuse 产品只出真图,不当画布);</li>
+        <li>重绘前后<b>双阈值差分</b>抠出合成小图,与真实小图同存 <code class="inl">patches/{检测区}/{缺陷}/</code>(外扩 8px + 中值去背景,同池平权)。</li>
       </ul>
     </div>
     <div class="stp">
-      <h4>4. ⚡ 底图划分与 512 切块配额 <code class="inl" style="font-size:13px">budget.py + dataset.py</code></h4>
+      <h4>4. ⚡ 统一预算:8:2 分卷 + 注水配额 <code class="inl" style="font-size:13px">budget.py</code></h4>
       <svg viewBox="0 0 560 104" style="width:100%;height:auto;display:block;margin:4px 0 2px" role="img" aria-label="分卷切块小图:训练池全量底图按八二分为训练底图与早停集,再打成512重叠网格并配正负一比一配额">
         <rect x="32" y="36" width="86" height="58" rx="3" class="metal"/>
         <rect x="26" y="30" width="86" height="58" rx="3" class="metal"/>
@@ -782,21 +781,21 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
         <text x="486" y="38" text-anchor="middle" class="tm">512 网格(步长 384)</text>
         <text x="486" y="58" text-anchor="middle" class="tm">骑缝小区红框补块</text>
         <text x="486" y="78" text-anchor="middle" class="tm">正:负 = 1:1 配额</text>
-        <text x="486" y="94" text-anchor="middle" class="tm" fill="#1e40af">按分区面积摊任务</text>
+        <text x="486" y="94" text-anchor="middle" class="tm" fill="#1e40af">√(T×D) 注水分配</text>
       </svg>
       <ul>
-        <li>4.1 训练池(全部合格图)按 <span class="kn">8:2</span> 分训练底图 / 早停集(每点位 ≤<span class="kn">10</span> 张);</li>
-        <li>4.2 步长 384 重叠网格 + 小连通域补块,构建 512 切块网格;</li>
-        <li>4.3 按块内各分区有效面积折算"每块·每区·每种缺陷"均衡配额,正负 <span class="kn">1:1</span>。</li>
+        <li>训练池(全部合格图)按 <span class="kn">8:2</span> 分训练底图 / 早停集(每点位 ≤<span class="kn">10</span> 张;全产品验证干净块全局封顶 <span class="kn">1200</span>,防百点位验证超时);</li>
+        <li>预切统计每个 (点位, 检测区) 的<b>干净块数 T</b>(跳过含标注块)与缺陷种数 D,按权重 <b>√(T×D)</b> 在上下界内"注水"分配单轮正样本配额 E——小区保底 100×D、单块最多重复 5 次、单轮全产品 ≤<span class="kn">16000</span>;</li>
+        <li>超大检测区自动拆 <b>num_shards</b> 分片跨轮轮转(轮转完毕前早停不生效);<b>正负 1:1</b>;合成配额 Q_synth 由 E 同源导出。</li>
       </ul>
     </div>
     <div class="stp">
-      <h4>5. 分割模型迭代训练与考卷验收(上限 <span class="kn">20</span> 轮;早停:练满 <span class="kn">8</span> 轮后 val_loss 连续 <span class="kn">4</span> 轮不降)</h4>
-      <svg viewBox="0 0 560 104" style="width:100%;height:auto;display:block;margin:4px 0 2px" role="img" aria-label="训练循环小图:每轮造题、训练、验证、考试循环最多20轮可早停,旁边是净化底图,产出best与deploy">
+      <h4>5. 阶段 3 分割训练与考卷验收(上限 <span class="kn">20</span> 轮;早停:练满 <span class="kn">max(8, 分片数)</span> 轮后 val_loss 连续 <span class="kn">4</span> 轮不降)</h4>
+      <svg viewBox="0 0 560 104" style="width:100%;height:auto;display:block;margin:4px 0 2px" role="img" aria-label="训练循环小图:每轮造题、训练、验证、考试循环最多20轮可早停,旁边是原图干净切块说明,产出best与deploy">
         <circle cx="110" cy="56" r="36" fill="none" stroke="#93b4f5" stroke-width="2"/>
         <path d="M 138,36 A 36,36 0 0 1 142,62" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#ah1)"/>
         <text x="110" y="53" text-anchor="middle" class="tb">每轮</text>
-        <text x="110" y="68" text-anchor="middle" class="tm">≤20 · 早停 8+4</text>
+        <text x="110" y="68" text-anchor="middle" class="tm">≤20 · 早停 max(8,分片)+4</text>
         <circle cx="110" cy="20" r="4" fill="#2563eb"/>
         <text x="110" y="12" text-anchor="middle" class="tm">① 造题贴缺陷</text>
         <circle cx="146" cy="56" r="4" fill="#2563eb"/>
@@ -811,30 +810,30 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
         <text x="288" y="64" text-anchor="middle" class="t">best 权重</text>
         <text x="288" y="82" text-anchor="middle" class="tm">+ deploy/ 推理包</text>
         <rect x="388" y="20" width="152" height="72" rx="10" fill="#e9f6ee" stroke="#86d3a1" stroke-width="1.8"/>
-        <text x="464" y="42" text-anchor="middle" class="tb" fill="#15803d">5.1 ⚡ 净化底图</text>
-        <text x="464" y="62" text-anchor="middle" class="tm">三类区域抹平成 .clean.png</text>
-        <text x="464" y="80" text-anchor="middle" class="tm">并标 255 忽略区</text>
+        <text x="464" y="42" text-anchor="middle" class="tb" fill="#15803d">⚡ 原图干净切块</text>
+        <text x="464" y="62" text-anchor="middle" class="tm">跳过含标注与无区的块</text>
+        <text x="464" y="80" text-anchor="middle" class="tm">区内 0/1 · 区外 255</text>
       </svg>
       <ul>
-        <li>5.1 ⚡ 净化训练底图:已标缺陷/排除区(外扩 8px)与对齐微偏边界污染(外扩 2px)抹平成 <code class="inl">.clean.png</code> 并标 255;</li>
-        <li>5.2 每轮在线造题:均衡池按配额出题,正负 1:1(细节在第 8 章);</li>
-        <li>5.3 <b>[训练]</b>:EfficientViT-SAM L1 + LoRA + 级联浅层跳连分割头(Focal+Dice,bf16,EMA);</li>
-        <li>5.4 <b>[验证早停]</b>:固定早停题集全像素稠密算 val_loss,决定是否早停;</li>
-        <li>5.5 <b>[考卷考试]</b>:val/ 独立考卷切块推理(重叠带线性加权窗拼接)→ 阈值 0.5 算总交集、逐缺陷命中数与<b>综合质量分</b>(误报倒扣),择优交付 best + deploy/。</li>
+        <li>训练图块全部从<b>原始 .bmp 直裁</b>(零净化):沾到任何标注(含外扩 4px)或不含有效检测区的块直接跳过;</li>
+        <li>每轮在线造题:注水配额出题正负 1:1;多区逐区贴图,每 (检测区,缺陷) 一只<b>无放回牌靴</b>(真实 + 合成平权),区内/区边缘五五分、零光晕泊松,区内 0/1、区外 255(细节在第 8 章);</li>
+        <li><b>[训练]</b>:EfficientViT-SAM L1 + LoRA + 级联浅层跳连分割头(Focal+Dice,bf16,EMA);</li>
+        <li><b>[验证早停]</b>:固定早停题集全像素稠密算 val_loss,决定是否早停;</li>
+        <li><b>[考卷考试]</b>:val/ 考卷按<b>圆滑有效检测区</b>(扣除「排除」区)切块推理(重叠带加权窗拼接)→ 阈值 0.5 算总交集、命中数与<b>综合质量分</b>(检出×3000 − 0.05×误报),择优交付 best + deploy/。</li>
       </ul>
     </div>
   </div>
 
   <div class="co plain">
     <span class="tag">💡 大白话</span>
-    <p>整条事件线像办一场<b>规范的考试周</b>:先查证件(体检)→ 把所有考生排到同一间教室并对每位考生的错题建档(对齐 + 真实小图)→ 照着错题量产模拟锥桶(LoRA 生成)→ 排课程表(分卷与配额)→ 白天在净化过的场地上刷题、晚上小测,练到进步停滞就停(训练+验证)→ 期末卷打分,历史最高分留档(考试+best)。而且全程有个"班主任直播间"(监控 web 8300)可以围观。<b>1~4 和 5.1 都是 ⚡ 可缓存跳过的</b>——素材没改时,第二次启动直接从刷题开始。</p>
+    <p>整条事件线像办一场<b>规范的考试周</b>:先查证件(体检)→ 把标准地图誊到每位考生的桌面上并对每位考生的错题建档(逆向对齐 + 真实小图)→ 照着错题给每种题量产模拟锥桶(专属 LoRA + 合成小图)→ 排课程表(统一注水预算)→ 白天在 100% 干净的原始场地上刷题、晚上小测,练到进步停滞就停(训练+验证)→ 期末卷打分,历史最高分留档(考试+best)。而且全程有个"班主任直播间"(监控 web 8300)可以围观。<b>①~③ 都是 ⚡ 指纹可跳过的</b>——素材没改时,第二次启动直接从刷题开始。</p>
   </div>
 </section>
 
 <!-- ================= 第 5 章 ================= -->
 <section id="checkup">
-  <div class="chap"><span class="chapno">第 5 章</span><h2>事件线 1 · 素材体检:不合格大声退出,绝不代建</h2></div>
-  <div class="chapref">对应 README 事件线 1 + checkup.py 源码</div>
+  <div class="chap"><span class="chapno">第 5 章</span><h2>素材体检:不合格大声退出,绝不代建</h2></div>
+  <div class="chapref">对应 README 宏观大流程 1 + checkup.py 源码</div>
 
   <p>开训前先来一场"入场体检",把最常见的坑全部前置拦截。体检表(逐项核对,任一不过直接退出):</p>
   <div class="tscroll">
@@ -842,7 +841,7 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
     <tr><th>检查项</th><th>具体要求</th><th>拦的是什么坑</th></tr>
     <tr><td>分区定义齐备</td><td>每点位恰好一份 <code class="inl">{基准图名}.json</code>,可解析、有分区;且必须含非空 <b>"domain"</b> 分区(对齐依据)和<b>至少 1 个非空检测分区</b></td><td>缺 domain 没法对齐;只有 domain 没有检测区 = 无题可出;两份 json 不知道听谁的</td></tr>
     <tr><td>基准图在场</td><td>与 json 同名的 <code class="inl">{基准图名}.bmp</code> 必须存在,且必须留在<b>点位根目录</b>(对齐要用它的像素;不可移入 val/)</td><td>json 是从别的图上画完拷来的</td></tr>
-    <tr><td>每类缺陷实例 ≥4</td><td>训练池(含 --reuse 复用产品)中每种非「排除」缺陷的标注实例数必须 <b>&gt; 3(至少 4 个)</b>;连 val/ 考卷里出现的缺陷类型也算在内</td><td>实例太少撑不起规格测算与 LoRA 训练,统计出的"平均个头"全是噪声</td></tr>
+    <tr><td>(检测区, 缺陷) 实例 ≥4</td><td>训练池(含 --reuse 复用产品)中每种非「排除」缺陷全局 <b>&gt;3(至少 4 个)</b>,且<b>每个 (检测区, 缺陷) 组合</b>也要 ≥4 个(归属判定在体检后进行);连 val/ 考卷里出现的缺陷类型也算在内</td><td>实例太少撑不起规格测算与"每组合一支"的专属 LoRA,统计出的"平均个头"全是噪声</td></tr>
     <tr><td>考卷独立且合法</td><td>考卷单独放 <code class="inl">{点位}/val/</code>:每张必须带 <code class="inl">.bmp.tmp</code> 且含非「排除」标注;<b>全部点位都没有考卷 → 直接失败</b>(没有考试与 best 选型无从谈起)</td><td>考卷缺标注 = 没有标准答案;考卷混进根目录 = 漏题隐患</td></tr>
     <tr><td>全点位同分辨率</td><td>所有点位图像(训练池 + val/ 考卷)分辨率一致,且与 json 分区蒙版尺寸一致</td><td>不同机位相机分辨率不同,切块网格对不上</td></tr>
     <tr><td>标注可解析</td><td>.tmp 文件能解析出非空多边形</td><td>标注文件手改坏了</td></tr>
@@ -850,7 +849,7 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
   </div>
   <div class="co why">
     <span class="tag">🎯 为什么"绝不代建"?为什么敢缓存跳过?</span>
-    <p>缺文件就大声报错退出,而不是偷偷帮你生成一个默认的。因为素材错了,训练会"安静地"产出垃圾模型——错误越早暴露代价越小。体检通过后建立<b>素材索引</b>(每点位:分区、对齐参数、OK/NG/考卷清单、分辨率),后续对齐/造题/考试全部消费这份索引。<b>增量缓存</b>:把全部 json/bmp/.tmp 的"大小+修改时间"算成一个指纹存 <code class="inl">checkup_cache.pkl</code>——文件没变,下次启动 0.1 秒直接复用索引,1.1/1.2/1.3 全跳过。</p>
+    <p>缺文件就大声报错退出,而不是偷偷帮你生成一个默认的。因为素材错了,训练会"安静地"产出垃圾模型——错误越早暴露代价越小。体检通过后建立<b>素材索引</b>(每点位:分区、对齐参数、OK/NG/考卷清单、分辨率),后续对齐/造题/考试全部消费这份索引。体检一过,立刻执行<b>开局指纹检测</b>(prep_plan,见 6.3 细节④):四个前置环节没变的部分直接跳过,全程绝不零散探测。</p>
   </div>
   <p class="fnote">小提醒:某点位如果 val/ 下没有考卷图,体检给警告但不拦(该点位考试时跳过);但<b>全部点位都没考卷</b>会直接失败。</p>
 
@@ -862,8 +861,8 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
 
 <!-- ================= 第 6 章 ================= -->
 <section id="align">
-  <div class="chap"><span class="chapno">第 6 章</span><h2>事件线 2.1~2.2 · 整图对齐:把所有照片搬回同一坐标系</h2></div>
-  <div class="chapref">对应 README 事件线 2.1~2.2 + align.py 源码(2.3~2.4 真实小图见第 7 章)</div>
+  <div class="chap"><span class="chapno">第 6 章</span><h2>逆向精对齐:照片不动,把"标准地图"誊到每张照片上</h2></div>
+  <div class="chapref">对应 README 宏观大流程 1(体检与逆向精对齐)+ align.py 源码</div>
 
   <h3>6.1 为什么必须对齐?对齐到底"改"了什么?</h3>
   <p>相机每次拍照,工件位置总有毫米级偏差(挪了一点、歪了一点)——<b>同一块金属、同一道划痕,在不同照片里落在不同的像素位置上</b>。这会直接毁掉训练,先看会发生什么:</p>
@@ -884,98 +883,94 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
       <text x="340" y="64" text-anchor="middle" class="tm" fill="#dc2626">相机的毫米级拍照偏差 → 同一道划痕错开几十个像素</text>
 
       <rect x="25" y="176" width="630" height="34" rx="8" fill="#fdecec" stroke="#f0a5a5"/>
-      <text x="340" y="198" text-anchor="middle" class="t" fill="#b91c1c">不对齐直接混训:同一个坐标位置,A 图教"这是划痕",B 图教"这是正常金属" → 自相矛盾</text>
+      <text x="340" y="198" text-anchor="middle" class="t" fill="#b91c1c">不对齐就硬套分区:同一个"考场范围",A 图罩住加工面、B 图罩住隔壁的槽 → 全盘错位</text>
 
-      <text x="340" y="240" text-anchor="middle" class="tb" fill="#15803d">解法:先把每张照片搬回基准图坐标系,再训练</text>
+      <text x="340" y="240" text-anchor="middle" class="tb" fill="#15803d">解法:照片不动——给每张照片解一份 H,把分区誊过去再吸附边缘</text>
 
       <rect x="40" y="252" width="130" height="62" rx="6" fill="none" stroke="#60a5fa" stroke-width="1.4" opacity=".45"/>
       <rect x="52" y="258" width="130" height="62" rx="6" fill="none" stroke="#60a5fa" stroke-width="1.4" opacity=".6"/>
       <rect x="64" y="264" width="130" height="62" rx="6" class="metal"/>
       <path d="M102,296 L148,306" stroke="#8f3412" stroke-width="5" stroke-linecap="round" fill="none"/>
-      <text x="129" y="346" text-anchor="middle" class="tm">三张"胶片"摆齐后叠起来</text>
+      <text x="129" y="346" text-anchor="middle" class="tm">三张照片各自的"有效检测区"</text>
 
       <path d="M 208,295 L 240,295" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
 
       <rect x="246" y="252" width="409" height="88" rx="10" fill="#e9f6ee" stroke="#86d3a1" stroke-width="1.8"/>
-      <text x="450" y="278" text-anchor="middle" class="t">零件每个位置严丝合缝:同一位置在每张图里都是同一块金属</text>
-      <text x="450" y="302" text-anchor="middle" class="tm">是非分明,不再自相矛盾——分区圈地、标注对答案、跨图找规律</text>
-      <text x="450" y="322" text-anchor="middle" class="tm">从此全部说同一种"坐标语言"</text>
+      <text x="450" y="278" text-anchor="middle" class="t">同一块物理地盘 → 在每张照片里被同一套"有效检测区"罩住</text>
+      <text x="450" y="302" text-anchor="middle" class="tm">分区圈地、缺陷归属、跨点位共享素材,从此说同一种"地名"</text>
+      <text x="450" y="322" text-anchor="middle" class="tm">照片一张都没动,原图 100% 原始像素</text>
     </svg>
-    <figcaption>不对齐的后果:A 图与 B 图拍的是同一个零件、同一道划痕,但毫米级拍照偏差让它在两张图里错开几十个像素——直接混着训练,同一个坐标位置会收到"是划痕"和"是正常金属"两份矛盾的答案,模型被教糊涂。先对齐再训练:所有照片叠起来严丝合缝,同一位置在每张图里都是同一块金属。</figcaption>
+    <figcaption>不对齐的后果:A 图与 B 图拍的是同一个零件、同一道划痕,但毫米级拍照偏差让它在两张图里错开几十个像素——只画一次的分区(考场范围)若不按各张照片的摆法换算,就会 A 图罩住加工面、B 图罩住隔壁的槽,出题、归属、计分全盘错位。解法(逆向精对齐):照片一张都不动,给每张照片解一份"基准图 → 照片"的换算表 H,把分区誊过去并吸附到零件真实边缘——同一块物理地盘,在每张照片里都被同一套"有效检测区"罩住。</figcaption>
   </figure>
 
   <div class="co plain">
-    <span class="tag">💡 大白话:透明胶片叠图</span>
-    <p>把每张照片想成印着零件的<b>透明胶片</b>:全部叠起来看,不摆齐就叠,零件轮廓全是<b>重影</b>,一道划痕分身成好几个影子——模型学到的是"到处都飘着划痕的影子"(纯噪声);先把每张胶片摆到同一位置再叠,轮廓<b>重合成一个</b>,划痕只出现在它真正该在的地方。这步"摆齐",就是对齐。</p>
+    <span class="tag">💡 大白话:一张平面图,几百种摆法</span>
+    <p>分区像一张只画了一次的<b>考场平面图</b>,要套到几百张摆法各不相同的照片上用。不配"换算表"就硬套,同一块地盘在 A 图罩住加工面、在 B 图罩住隔壁的槽——考场自己先乱了。对齐就是给<b>每张照片</b>解一份专属换算表 H,把平面图<b>按这张照片的摆法誊一份再贴上去</b>,并吸附到零件真实边缘——同一块物理地盘,在每张照片里都被同一套"有效检测区"罩住,而照片本身一个像素都不用动。</p>
   </div>
 
-  <p><b>对齐 = 给每张照片求一份"摆放说明",把它们全部搬回基准图的坐标系,让零件的每个位置在所有照片里像素对像素重合</b>(怎么找角点、怎么解这份说明,见下一节 6.2)。</p>
+  <p><b>对齐 = 给每张照片解一份"坐标换算表" H(基准图 → 照片),把基准图上画的分区逆向投射到照片上,再吸附到零件的真实边缘,得到这张照片专属的"有效检测区"</b>——照片本身一个像素都不被改动(怎么找角点、怎么解这份换算表,见下一节 6.2)。</p>
 
   <div class="co why">
     <span class="tag">🎯 为什么说对齐是"地基"?全图训练不行吗?</span>
     <p>模型认的是"样子"——划痕挪几十个像素它照样认得。所以如果<b>全图当考场、标注跟着各自的照片走</b>,原理上确实能训。但 train 这套系统是"<b>分区画一次、自动出题、自动判卷</b>"的自动化设计:分区在基准图上画一次就要套用几百张照片,假缺陷按分区坐标自动贴、贴哪儿答案就自动生成在哪,成绩按坐标逐点比——而零件每张照片都挪几毫米,不对齐这些环节全会错位。</p>
     <p>改走全图路线的代价:检测范围要么逐张照片手工画(几百张图 × 几十个点位,工作量爆炸),要么把夹具、深槽、反光全当"正常"教(误报温床);同时放弃自动贴题,还要多几倍数据才补得回"<b>位置记忆</b>"这条线索——对齐后同一位置在每张图里都是同一块金属,模型能记住"这里平时长什么样",9~13 像素的小砂眼全靠它救命。所以工程上,<b>对齐是最便宜的那块地基</b>。</p>
   </div>
-  <p><b>那对齐到底"改"了什么?</b>——<b>什么都没改:硬盘上的原件一个字节都不动,程序全程只是在"复印"和"誊写"</b>。三样原件各有各的用法:</p>
+  <p><b>那对齐到底"改"了什么?</b>——<b>连副本都不生成:照片零扭曲、零净化,训练与考试全程直接消费原始 .bmp</b>。对齐的产物只有一样东西——一本轻量台账 <code class="inl">align.json</code>:</p>
   <ul>
-    <li><b>照片(每次拍的 .bmp)</b>:原件不动;程序给每张复印一份<b>"摆正版"</b>(<code class="inl">.tmp/aligncache/</code> 对齐缓存,附 <code class="inl">.valid.png</code> "真拍到"印章)——之后<b>训练造题、考试切块用的全是这份复印件</b>;</li>
-    <li><b>分区蒙版(画在基准图上的 json)</b>:原件不动;要在某张歪照片上圈地盘时,把蒙版<b>誊一份同样歪的</b>临时贴上去用,用完即撕、不落盘;</li>
-    <li><b>标注多边形(画在照片上的 .tmp)</b>:原件不动;考试对答案时,才把老师画的圈<b>誊到"摆正版"上</b>,再和模型报警比位置。</li>
+    <li><b>每张照片一条记录</b>:装着它的坐标换算表 <b>H</b>(3×3 矩阵)与各区"有效检测区"的压缩蒙版(zb64 RLE);</li>
+    <li><b>照片与标注原件</b>:一个字节不动;考试直接在 val 原图上推理,老师画的圈也在原图上——<b>无需任何搬运</b>;</li>
+    <li><b>基准图与分区 json</b>:一个字节不动;需要时按 H 把分区"誊"到某张照片上用(逆向投射,专图见 6.3 细节⑤)。</li>
   </ul>
-  <p class="fnote">后两条"誊写"为什么一个贴过去、一个誊回来(方向相反)?那是单应 H 的方向口径,不急着懂——6.3 细节⑤有两张专图慢慢讲。</p>
+  <p class="fnote">所以这套"逆向对齐"比"把照片掰正"的老思路更彻底地保护原始数据:不掰正、不修补、不复制大图——只留一本台账。</p>
 
   <figure class="fig">
-    <svg viewBox="0 0 680 296" role="img" aria-label="原件与副本关系图:三份原件照片、分区json、标注tmp只读不动,经对齐车间的复印与誊写,产出摆正的对齐缓存图与用完即撕的临时誊写件">
-      <text x="340" y="22" text-anchor="middle" class="tb">对齐"动"的是副本,不是原件 —— 硬盘上一个字节都不改</text>
+    <svg viewBox="0 0 680 296" role="img" aria-label="逆向对齐产物图:照片与分区两份原件只读不动,经解H、投射与吸附车间,唯一产物是align.json台账,训练与考试直接消费原图">
+      <text x="340" y="22" text-anchor="middle" class="tb">逆向对齐的产物只有一本台账 —— 照片零扭曲、零净化</text>
 
-      <text x="120" y="48" text-anchor="middle" class="t">💾 三份原件 · 永不修改</text>
+      <text x="120" y="48" text-anchor="middle" class="t">💾 两份原件 · 永不修改</text>
       <rect x="25" y="58" width="190" height="54" rx="8" fill="#fbfaf6" stroke="#d8d2c0" stroke-width="1.5"/>
-      <text x="37" y="80" class="t">照片 *.bmp</text>
-      <text x="37" y="100" class="tm">(现场拍的原片)</text>
+      <text x="37" y="80" class="t">照片 *.bmp(全部点位)</text>
+      <text x="37" y="100" class="tm">(训练与考试直接消费原图)</text>
       <rect x="25" y="120" width="190" height="54" rx="8" fill="#fbfaf6" stroke="#d8d2c0" stroke-width="1.5"/>
       <text x="37" y="142" class="t">分区 {基准图}.json</text>
       <text x="37" y="162" class="tm">(画在基准图上的"标准地图")</text>
       <rect x="25" y="182" width="190" height="54" rx="8" fill="#fbfaf6" stroke="#d8d2c0" stroke-width="1.5"/>
       <text x="37" y="204" class="t">标注 *.tmp</text>
-      <text x="37" y="224" class="tm">(老师画的缺陷圈)</text>
+      <text x="37" y="224" class="tm">(老师画的圈,跟图走)</text>
 
       <line x1="217" y1="85" x2="241" y2="130" class="lead"/>
       <line x1="217" y1="147" x2="241" y2="164" class="lead"/>
-      <line x1="217" y1="209" x2="241" y2="200" class="lead"/>
+      <line x1="217" y1="209" x2="241" y2="198" class="lead"/>
 
       <rect x="243" y="96" width="148" height="136" rx="12" fill="#eaf2fe" stroke="#93b4f5" stroke-width="2"/>
-      <text x="317" y="120" text-anchor="middle" class="tb">对齐车间</text>
-      <g transform="rotate(-10 281 160)">
-        <rect x="262" y="146" width="38" height="28" rx="3" class="metal"/>
-      </g>
-      <path d="M 304,160 L 320,160" fill="none" stroke="#64748b" stroke-width="1.8" marker-end="url(#ah1)"/>
-      <rect x="324" y="146" width="38" height="28" rx="3" class="metal"/>
-      <text x="317" y="198" text-anchor="middle" class="tm">复印 · 誊写</text>
-      <text x="317" y="216" text-anchor="middle" class="tm">(原件只读不动)</text>
+      <text x="317" y="118" text-anchor="middle" class="tb">逆向对齐车间</text>
+      <text x="317" y="142" text-anchor="middle" class="tm">① 角点配对解出 H</text>
+      <text x="317" y="162" text-anchor="middle" class="tm">② 分区按 H 投射到照片</text>
+      <text x="317" y="182" text-anchor="middle" class="tm">③ ±10px 边缘吸附</text>
+      <text x="317" y="206" text-anchor="middle" class="tm">(原件只读不动)</text>
 
-      <path d="M 393,150 C 410,140 416,120 426,102" fill="none" stroke="#9aa2b1" stroke-width="1.2" marker-end="url(#ah1)"/>
-      <path d="M 393,180 C 410,186 416,192 426,196" fill="none" stroke="#9aa2b1" stroke-width="1.2" marker-end="url(#ah1)"/>
+      <path d="M 393,164 C 410,158 416,140 426,124" fill="none" stroke="#9aa2b1" stroke-width="1.2" marker-end="url(#ah1)"/>
 
-      <text x="542" y="48" text-anchor="middle" class="t" fill="#1d4ed8">🆕 生成的副本 · 用完可重印</text>
+      <text x="542" y="48" text-anchor="middle" class="t" fill="#1d4ed8">🆕 唯一产物:align.json 台账</text>
       <rect x="430" y="58" width="225" height="84" rx="8" fill="#eaf2fe" stroke="#93b4f5" stroke-width="1.6"/>
-      <text x="442" y="80" class="t"><b>摆正的对齐缓存图 aligncache/</b></text>
-      <text x="442" y="102" class="tm">训练造题、考试切块全用它</text>
-      <text x="442" y="120" class="tm">附 .valid.png「真拍到」印章</text>
+      <text x="442" y="80" class="t"><b>每张照片一条记录</b></text>
+      <text x="442" y="102" class="tm">H(3×3 换算表)</text>
+      <text x="442" y="120" class="tm">各区有效检测区(压缩蒙版)</text>
       <rect x="430" y="150" width="225" height="86" rx="8" fill="#f3eefe" stroke="#ddd3f8" stroke-width="1.6"/>
-      <text x="442" y="172" class="t"><b>临时誊写件(用完即撕,不落盘)</b></text>
-      <text x="442" y="194" class="tm">圈地盘:蒙版誊成同歪的贴上照片</text>
-      <text x="442" y="212" class="tm">对答案:把标注誊到摆正版上比位置</text>
-      <text x="442" y="230" class="tm" fill="#6d28d9">(方向细节见 6.3 细节⑤两图)</text>
+      <text x="442" y="172" class="t"><b>两个版本的有效检测区</b></text>
+      <text x="442" y="194" class="tm">紧贴版:训练切块/贴图(保证干净)</text>
+      <text x="442" y="212" class="tm">圆滑版:推理与归属(不漏贴边缺陷)</text>
+      <text x="442" y="230" class="tm" fill="#6d28d9">(紧贴 vs 圆滑见下方专图)</text>
 
       <rect x="25" y="252" width="630" height="30" rx="8" fill="#e9f6ee" stroke="#86d3a1" stroke-width="1.6"/>
-      <text x="340" y="272" text-anchor="middle" class="t" fill="#15803d">原件锁柜、复印流通——对齐参数改了、重跑对齐,原始数据零风险,大不了重新复印一遍</text>
+      <text x="340" y="272" text-anchor="middle" class="t" fill="#15803d">不掰正、不修补、不复制大图——重跑对齐零风险,台账随时可重建</text>
     </svg>
-    <figcaption>原件与副本:三份原件(照片 / 分区 json / 标注 .tmp)只读不动;对齐车间做的全是"复印与誊写"——长期副本只有一份"摆正的对齐缓存图"(训练与考试都消费它),其余誊写件用完即撕。所以对齐永远不碰原始数据,重跑零风险。</figcaption>
+    <figcaption>逆向对齐的产物:两份原件(照片 / 分区 json / 标注)只读不动;"车间"做的三件事——解 H、把分区逆向投射到照片、±10px 边缘吸附——结果全部写进一本 align.json 台账(每张照片一条:H + 各区有效检测区蒙版)。训练切块与考试推理直接读原始 .bmp,配上台账里的蒙版即可开工。</figcaption>
   </figure>
 
   <div class="co plain">
     <span class="tag">💡 大白话:档案馆只发复印件</span>
-    <p>把对齐想成一座<b>档案馆</b>:现场照片是带歪斜的原始档案,<b>入库原件永远锁在柜里不改</b>;要训练、要考试,馆员按"摆放说明书"(H)复印出一份<b>摆正的复印件</b>(aligncache 对齐缓存)发给大家用。分区蒙版是馆里的<b>标准地图</b>,也从不改——需要在某张歪照片上圈范围时,把地图<b>誊一份</b>贴到那张照片上(临时投射,用完撕掉);照片上的批注(标注)要对答案时,才誊回标准地图上比位置。<b>原件不动,誊来誊去的都是副本</b>——所以对齐参数改了、重跑对齐,都不会弄丢或污染任何原始数据。</p>
+    <p>把对齐想成一座<b>档案馆</b>:现场照片是原始档案,<b>永远锁在柜里不动、不复印、不修补</b>;馆里唯一的"标准地图"(基准图分区)也从不改。馆员对每张照片只做一件事:<b>把标准地图按这张照片的摆法誊一张同样歪的小样收进台账</b>(逆向投射 + 边缘吸附),以后要在哪张照片上圈地盘,翻台账就行。训练、考试都直接看原件——<b>台账只是目录,原件才是教材</b>,所以对齐参数改了、重跑对齐,都不会弄丢或污染任何原始数据。</p>
   </div>
 
   <h3>6.2 怎么对齐:角点配对 + 稳健解算</h3>
@@ -1035,7 +1030,7 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
     <p>平坦区像一面空墙,没有任何记号;边缘像一条长长的线,线上每个点长得一模一样,挪一挪就认不出谁是谁;<b>角点像墙角的插座、脸上的痣</b>——独一无二,一眼锁定。基准图和待测图要认出"同一个点"来配对,靠的正是角点这种"胎记":配出几十对,才能解出单应 H 那张坐标换算表。金属表面看着平,放大全是刀纹、螺纹、微坑,微观拐角遍地——所以角点管够,还嫌多(所以才要 6.3 的"每格取最强 30 个"限额)。</p>
   </div>
 
-  <p>地基打好,回到正题。对齐器与 define_masks 的对齐实验<b>完全同款</b>(Point8DofAligner,全程 Halcon 原生算子)。<b>具体用到的技术依次是</b>:<code class="inl">points_harris</code> 找角点(只在 domain 分区内)→ 分 <span class="kn">6×6</span> 格、每格取最强 <span class="kn">30</span> 个 → <code class="inl">proj_match_points_ransac</code> 稳健配对解单应(NCC 灰度匹配、匹配掩窗 10px、gold_standard 精解、内点距离阈 <span class="kn">1.5px</span>、搜索容差 <span class="kn">80px</span>、随机种子 42 固定可复现)→ <code class="inl">projective_trans_image</code> 双线性回贴;内点不足 <span class="kn">50</span> 个直接判失败(阈值从严,防偶然凑对)。</p>
+  <p>地基打好,回到正题。对齐器与 define_masks 的对齐实验<b>完全同款</b>(Point8DofAligner,全程 Halcon 原生算子)。<b>具体用到的技术依次是</b>:<code class="inl">points_harris</code> 找角点(只在 domain 分区内)→ 分 <span class="kn">6×6</span> 格、每格取最强 <span class="kn">30</span> 个 → <code class="inl">proj_match_points_ransac</code> 稳健配对解单应(NCC 灰度匹配、匹配掩窗 10px、gold_standard 精解、内点距离阈 <span class="kn">1.5px</span>、搜索容差 <span class="kn">80px</span>、随机种子 42 固定可复现);内点不足 <span class="kn">50</span> 个直接判失败(阈值从严,防偶然凑对)。解出 H 后<b>不回贴照片</b>——只把分区蒙版逆向投射到照片、再做 ±10px 边缘吸附,生成"有效检测区"。</p>
 
   <div class="co plain">
     <span class="tag">💡 大白话:单应矩阵 = 一张"透明胶片摆放说明书"</span>
@@ -1081,65 +1076,55 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
       <path d="M 495,62 L 508,62" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
 
       <rect x="510" y="115" width="150" height="65" rx="6" class="metal"/>
-      <text x="585" y="140" text-anchor="middle" class="tb">对齐图</text>
-      <text x="585" y="158" text-anchor="middle" class="t">待测图回贴基准系</text>
+      <path d="M522,134 h126" stroke="#f59e0b" stroke-width="1.4" stroke-dasharray="4 3" fill="none"/>
+      <path d="M522,152 C560,146 600,160 648,154" stroke="#06b6d4" stroke-width="2.2" fill="none"/>
+      <text x="585" y="172" text-anchor="middle" class="tm">投射(黄虚)→ 吸附(青)</text>
       <path d="M 585,96 L 585,111" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
 
       <rect x="510" y="192" width="150" height="40" rx="8" fill="#f3eefe" stroke="#ddd3f8" stroke-width="2"/>
-      <text x="585" y="210" text-anchor="middle" class="t">+ 有效像素掩码</text>
-      <text x="585" y="225" text-anchor="middle" class="tm">(真拍到的区域)</text>
+      <text x="585" y="210" text-anchor="middle" class="t">= 有效检测区</text>
+      <text x="585" y="225" text-anchor="middle" class="tm">(训练紧贴 / 推理圆滑)</text>
       <path d="M 585,182 L 585,190" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
 
       <text x="340" y="262" text-anchor="middle" class="tm">角点不足 50 个 / 内点 &lt; 50 / 位移或缩放不合理 → 对齐失败:图成对移入 align_failed/ 隔离并记 moved.jsonl,红字停止</text>
       <text x="340" y="280" text-anchor="middle" class="tm">基准图自身 = 恒等变换,照常参与训练</text>
     </svg>
-    <figcaption>对齐四步:① 基准图与待测图各找 Harris 角点(只在 domain 分区内——夹具、背景、反光不参与);② RANSAC 稳健配对解出 8 自由度单应 H;③ 待测图回贴"搬正"到基准坐标系(顺着 H 取样,方向口径见 6.3 细节⑤);④ 顺手生成"有效像素掩码"(回贴后真拍到的区域才算数)。</figcaption>
+    <figcaption>对齐四步:① 基准图与待测图各找 Harris 角点(只在 domain 分区内——夹具、背景、反光不参与);② RANSAC 稳健配对解出 8 自由度单应 H(基准图 → 照片的"坐标换算表");③ 分区蒙版按 H 逆向投射到照片(黄虚线);④ 沿投射轮廓法向 ±10px 吸附到零件真实边缘(青线),得到"有效检测区"——照片全程不动。</figcaption>
   </figure>
 
   <figure class="fig">
-    <svg viewBox="0 0 680 300" role="img" aria-label="摆正图与valid印章关系图:歪的原片按H掰正后,基准系画布大部分从原片取样成摆正图,角落落在原片外为空白;valid用白标实拍黑标空白,训练考试只在白章与分区的交集内进行">
-      <text x="340" y="22" text-anchor="middle" class="tb">对齐落盘的一对文件:摆正图(内容)+ .valid.png("真拍到"印章)</text>
+    <svg viewBox="0 0 680 262" role="img" aria-label="有效检测区两版对比图:刚投射有偏移与手画锯齿并漏掉边缘缺口;紧贴版吸到真实边缘内侧供训练;圆滑版架桥跨过缺口供推理与归属,贴边缺陷不漏">
+      <text x="340" y="22" text-anchor="middle" class="tb">有效检测区的两个版本:训练要"紧贴",推理要"圆滑"</text>
 
-      <g transform="rotate(4 95 118)">
-        <rect x="30" y="68" width="130" height="100" rx="4" class="metal"/>
-        <path d="M45,88 h100 M45,148 h100" class="metalln" opacity=".5"/>
-        <ellipse cx="95" cy="118" rx="18" ry="12" class="defect"/>
-        <ellipse cx="95" cy="118" rx="9" ry="6" class="defectd"/>
-      </g>
-      <text x="95" y="196" text-anchor="middle" class="tm">💾 原片(歪的,原件不动)</text>
+      <rect x="25" y="42" width="170" height="110" rx="5" class="metal"/>
+      <path d="M35,95 H185" stroke="#f59e0b" stroke-width="1.6" stroke-dasharray="5 4" fill="none"/>
+      <path d="M37,95 l8,-6 l8,7 l8,-5 l8,6 l8,-7 l8,6 l8,-5 l8,7 l8,-6 l8,5 l8,-6 l8,6 l8,-5 l8,4 l8,-5 l8,4" stroke="#b45309" stroke-width="1" fill="none" opacity=".7"/>
+      <text x="110" y="168" text-anchor="middle" class="tb">① 刚投射(黄虚线)</text>
+      <text x="110" y="188" text-anchor="middle" class="tm">毫米偏移 + 手画锯齿,</text>
+      <text x="110" y="206" text-anchor="middle" class="tm" fill="#b45309">还漏了边缘缺口</text>
 
-      <path d="M 172,118 L 214,118" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
-      <text x="193" y="104" text-anchor="middle" class="tm">按 H 掰正</text>
-      <text x="193" y="134" text-anchor="middle" class="tm">回贴取样</text>
+      <rect x="240" y="42" width="170" height="110" rx="5" class="metal"/>
+      <path d="M250,92 H305 V110 H325 V92 H385" stroke="#06b6d4" stroke-width="2.4" fill="none"/>
+      <text x="325" y="168" text-anchor="middle" class="tb">② 紧贴版 = 训练用(青线)</text>
+      <text x="325" y="188" text-anchor="middle" class="tm">±10px 吸到真实边缘内侧——</text>
+      <text x="325" y="206" text-anchor="middle" class="tm" fill="#15803d">切块、贴图 100% 干净</text>
 
-      <text x="340" y="56" text-anchor="middle" class="t">🆕 摆正图(基准系画布)</text>
-      <rect x="250" y="64" width="180" height="130" rx="4" fill="#fbfaf6" stroke="#d8d2c0" stroke-width="1.5" stroke-dasharray="5 4"/>
-      <polygon points="272,64 430,84 408,194 250,172" class="metal"/>
-      <ellipse cx="336" cy="128" rx="18" ry="12" class="defect"/>
-      <ellipse cx="336" cy="128" rx="9" ry="6" class="defectd"/>
-      <text x="256" y="104" text-anchor="middle" class="tm" fill="#b45309">空</text>
-      <text x="420" y="180" text-anchor="middle" class="tm" fill="#b45309">空</text>
-      <text x="340" y="212" text-anchor="middle" class="tm">训练与考试切块全从它裁</text>
+      <rect x="455" y="42" width="170" height="110" rx="5" class="metal"/>
+      <path d="M465,92 H505 C515,92 520,74 530,74 C540,74 545,92 555,92 H605" stroke="#15803d" stroke-width="2.4" fill="none"/>
+      <circle cx="530" cy="86" r="4" fill="#dc2626"/>
+      <text x="540" y="168" text-anchor="middle" class="tb">③ 圆滑版 = 推理/归属用(绿线)</text>
+      <text x="540" y="188" text-anchor="middle" class="tm">圆滑架桥跨过缺口——</text>
+      <text x="540" y="206" text-anchor="middle" class="tm" fill="#15803d">贴边缺陷(红点)不漏</text>
 
-      <text x="550" y="56" text-anchor="middle" class="t">🆕 .valid.png(同尺寸印章)</text>
-      <rect x="460" y="64" width="180" height="130" rx="4" fill="#111"/>
-      <polygon points="482,64 640,84 618,194 460,172" fill="#fff"/>
-      <rect x="472" y="206" width="13" height="10" fill="#fff" stroke="#8a8477"/>
-      <text x="491" y="215" class="tm">白 = 实拍区域(有内容)</text>
-      <rect x="472" y="222" width="13" height="10" fill="#111" stroke="#8a8477"/>
-      <text x="491" y="231" class="tm">黑 = 没拍到(原片范围外)</text>
-
-      <text x="340" y="240" text-anchor="middle" class="tm">掰正后,画布有些角落落在原片范围之外——那里不是黑也不是白,是"无内容"</text>
-
-      <rect x="30" y="252" width="620" height="30" rx="8" fill="#e9f6ee" stroke="#86d3a1" stroke-width="1.6"/>
-      <text x="340" y="272" text-anchor="middle" class="t" fill="#15803d">用法:训练与考试只在「白章 ∩ 分区」内进行——空白角落不当"正常"教、不计分(自动归入 255 忽略区)</text>
+      <rect x="25" y="224" width="630" height="26" rx="8" fill="#e9f6ee" stroke="#86d3a1" stroke-width="1.6"/>
+      <text x="340" y="242" text-anchor="middle" class="t" fill="#15803d">一图两版:训练宁少勿脏(切块绝不带进区外杂色);考试宁多勿漏(崩边、贴边缺陷必须圈进来)</text>
     </svg>
-    <figcaption>对齐落盘的一对文件:<b>摆正图</b> = 原片按 H 掰正后重新取样的基准系灰度副本(按「点位__文件名」存 aligncache/,与原图同名成对;净化后升级为 .clean.png 供训练切块,原图一个字节不动);<b>.valid.png</b> = 同尺寸黑白印章——白 = 实拍到的区域,黑 = 掰正后画布落在原片范围外的空白角落。两文件成对存放、成对引用;黑章角落自动归入 255 忽略区,不教、不学、不计分。</figcaption>
+    <figcaption>有效检测区的两个版本:分区刚投射到照片时带着毫米偏移与手画锯齿,还可能"漏包"零件边缘的缺口(①);<b>紧贴版</b>沿轮廓法向 ±10px 吸附到真实边缘内侧——训练切块、贴缺陷、算 0 标签全用它,保证每一块 100% 落在干净表面内(②);<b>圆滑版</b>对轮廓做圆滑架桥、直接跨过锯齿与缺口——考试推理与真缺陷归属判定用它,贴边缺陷、崩边不被漏掉也不误入相邻区(③)。两版都存进同一本 align.json 台账。</figcaption>
   </figure>
 
   <div class="co plain">
-    <span class="tag">💡 大白话:有效像素掩码 = "真拍到"印章</span>
-    <p>回贴像把拍歪的照片掰正——掰正后,画布的某些角落其实是空的(原图根本没拍到那里)。有效像素掩码就是在掰正结果上盖个章:"<b>这些位置是实拍的</b>"。后续训练、考试只认盖过章的像素,空角落一概不算数。</p>
+    <span class="tag">💡 大白话:同一张地图,训练版"抠门",考试版"大方"</span>
+    <p>紧贴版像个抠门的质检员——<b>宁可少圈一圈,绝不把区外杂色带进考场</b>(脏一点就等于教错课);圆滑版像个大方的验收员——<b>锯齿抹平、缺口架桥,宁可多圈一点,也不能漏掉贴着边长的缺陷</b>(否则考试时贴边真缺陷被划到区外,模型报了也不算分,白白冤枉)。两个版本各有各的场合,都记在同一本 align.json 台账里。</p>
   </div>
 
   <h3>6.3 源码里的工程细节(逐条图解)</h3>
@@ -1151,7 +1136,7 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
     <tr><td>① 结构尺度</td><td><b>快</b> + 准</td><td>粗活(找点、配对、解单应)在缩小图上干,又快又稳;真正"搬像素"时换回原图,清晰度一点不丢</td><td>对齐一张图要很久,还容易错配</td></tr>
     <tr><td>② 分网格均匀采样</td><td><b>匀</b></td><td>角点天然扎堆在花纹多的地方;每格限额后格格有锚钉,解出的变换对整幅图负责</td><td>变换只迁就扎堆的一小块,远处区域全贴歪</td></tr>
     <tr><td>③ 合理性检查</td><td><b>稳</b></td><td>给解出的变换当"安检门"——跑飞的(位移过大/缩放离谱)直接拒绝</td><td>错配点把解算带偏,照片被贴到九霄云外,悄悄毒化数据</td></tr>
-    <tr><td>④ 对齐增量缓存</td><td><b>省</b></td><td>每张图按"文件改没改"单独算指纹——改过的重算、没改的直接复用 <code class="inl">align.json</code> 与 aligncache;跨会话也保留</td><td>调整一个训练参数也要几百张大图全部重新对齐,白白浪费几十分钟</td></tr>
+    <tr><td>④ 开局跳过检测</td><td><b>省</b></td><td>开局一次性比对四环节指纹(对齐按点位、LoRA/合成按 区,缺陷)——没变的直接复用 <code class="inl">align.json</code> / <code class="inl">patches/</code> / LoRA 权重,合成可留旧补差;跨会话也保留</td><td>调整一个训练参数也要几百张图全部重做前置,白白浪费几十分钟</td></tr>
     <tr><td>⑤ H 方向口径</td><td><b>准</b></td><td>一张"查址表"定死两个方向:回贴顺着查、搬标注逆着查,全工程统一</td><td>方向用反,图和标注一搬就歪,考试计分全错还难排查</td></tr>
   </table>
   </div>
@@ -1161,8 +1146,8 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
     <p>把五条串起来看,就是给"把几百张现场照片摆进同一张标准地图"这条流水线装的五道工序:<b>先用小图快速找到锚钉(快),再把锚钉铺满全图(匀),解出的变换过一遍安检(稳),结果存档反复用(省),最后所有搬运统一方向(准)</b>。少了任何一道,照片要么摆得慢、要么摆得歪、要么搬丢了。</p>
   </div>
 
-  <h4>细节① 结构尺度:找点用小图,搬家用大图</h4>
-  <p>直接在几千像素的大图上找角点、配对,又慢又容易错配。做法是先<b>等比缩到宽 <span class="kn">512</span></b>(结构尺度)把"找点 + 配对 + 解单应"全干完,再把解出的单应<b>换算回全分辨率</b>、用原图回贴——锐度一点不丢。搜索容差默认 <span class="kn">80px</span>:每个基准角点只在邻域 ±80px(按尺度折算)内找待测伙伴;待测图偏移大时可在 json 的 align 段加大。</p>
+  <h4>细节① 结构尺度:找点用小图,吸附用大图</h4>
+  <p>直接在几千像素的大图上找角点、配对,又慢又容易错配。做法是先<b>等比缩到宽 <span class="kn">512</span></b>(结构尺度)把"找点 + 配对 + 解单应"全干完,再把解出的单应<b>换算回全分辨率</b>——分区投射与 ±10px 边缘吸附直接在原图分辨率上进行,精度一点不丢。搜索容差默认 <span class="kn">80px</span>:每个基准角点只在邻域 ±80px(按尺度折算)内找待测伙伴;待测图偏移大时可在 json 的 align 段加大。</p>
 
   <figure class="fig">
     <svg viewBox="0 0 680 250" role="img" aria-label="结构尺度三格图:原图直接匹配慢且易错配,缩到宽512找点配对解单应又快又稳,回贴仍用全分辨率原图保住锐度">
@@ -1194,15 +1179,15 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
       <text x="431" y="80" text-anchor="middle" class="tm">单应换算</text>
       <text x="431" y="94" text-anchor="middle" class="tm">回原尺寸</text>
 
-      <text x="551" y="24" text-anchor="middle" class="tb">③ 回贴用原图</text>
+      <text x="551" y="24" text-anchor="middle" class="tb">③ 吸附用原图</text>
       <rect x="456" y="34" width="190" height="130" rx="6" class="metal"/>
       <path d="M466,64 h170 M466,134 h170" class="metalln" opacity=".5"/>
       <path d="M551,75 C565,71 577,80 578,93 C579,108 568,117 554,117 C540,117 532,107 535,94 C537,84 543,78 551,75 Z" class="defect"/>
       <path d="M555,85 C562,83 568,88 568,95 C568,103 561,107 555,107 C549,107 545,101 547,94 C548,89 551,86 555,85 Z" class="defectd"/>
-      <text x="551" y="182" text-anchor="middle" class="tm" fill="#15803d">搬家在原尺寸做:锐度一点不丢</text>
+      <text x="551" y="182" text-anchor="middle" class="tm" fill="#15803d">投射与吸附在原尺寸做:精度一点不丢</text>
       <text x="551" y="198" text-anchor="middle" class="tm">小结:小图办事,大图落笔</text>
     </svg>
-    <figcaption>结构尺度:重活(找角点、配对、解单应)都在宽 512 的小图上干,又快又稳;真正"搬家"(回贴)时换回全分辨率原图,清晰度不受半点损失。搜索容差 ±80px 限定每个角点只在邻域内找伙伴,既加速又防错配。</figcaption>
+    <figcaption>结构尺度:重活(找角点、配对、解单应)都在宽 512 的小图上干,又快又稳;分区投射与 ±10px 边缘吸附换回全分辨率原图进行,精度不受半点损失。搜索容差 ±80px 限定每个角点只在邻域内找伙伴,既加速又防错配。</figcaption>
   </figure>
 
   <h4>细节② 分网格均匀采样:36 格 × 每格 30 个,全图都有锚钉</h4>
@@ -1272,92 +1257,88 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
     <figcaption>合理性检查:蓝虚线 = 基准位姿,橙线 = 解出的待测位姿。左:挪一点、歪一点、大小正常——通过;右:飞出去老远 / 放大得离谱——配对错了,直接拒绝(对齐失败的图成对移入 align_failed/ 隔离、记 moved.jsonl 并红字停止,数据修好后下次启动自动归队,见 6.4)。</figcaption>
   </figure>
 
-  <h4>细节④ 对齐增量缓存:改哪张算哪张,没改的直接复用</h4>
+  <h4>细节④ 开局跳过检测(prep_plan):开局一次查完,绝不零散探测</h4>
   <div class="flow">
-    <div class="fbox grn"><b>启动</b><small>逐张比对三枚指纹(原图"大小+修改时间"<br>+ 基准侧指纹)与 <code class="inl">align.json</code> 记录</small></div>
+    <div class="fbox grn"><b>体检通过后立刻</b><small>毫秒级采集 .bmp / .json / .tmp 指纹<br>+ 各环节算法版本号,<br>读 prep_fingerprints.json 集中比对</small></div>
     <div class="farr">→</div>
-    <div class="fbox grn"><b>没改的图</b><small>直接复用单应 H 与<br><code class="inl">aligncache/</code> 对齐整图 + 有效掩码<br>(--reuse 复用产品只复用 H,不存整图)</small></div>
+    <div class="fbox grn"><b>四个环节逐一判定</b><small>逆向对齐(按点位)<br>真实小图(全局)<br>LoRA / 合成(按 区/缺陷)</small></div>
     <div class="farr">→</div>
-    <div class="fbox grn"><b>改过/新增的图</b><small>只重算这几张,<br>结果写回缓存</small></div>
+    <div class="fbox grn"><b>没变 → 跳过</b><small>对齐复用 align.json,<br>小图复用 patches/,LoRA 复用权重;<br>合成可"留旧补差"只补缺</small></div>
     <div class="farr">→</div>
-    <div class="fbox grn"><b>跨会话保留</b><small>归档时 align.json / aligncache<br>一并保留,下次启动接着用</small></div>
+    <div class="fbox grn"><b>变了 → 只重做该份</b><small>改了哪个点位 / 哪组 (区,缺陷)<br>就只重做哪份,指纹原子写回</small></div>
   </div>
 
   <figure class="fig">
-    <svg viewBox="0 0 680 310" role="img" aria-label="align.json台账结构图:键为点位加文件名,考卷加val前缀,一条记录装H矩阵、摆正图与valid路径、质量信息和三枚指纹;右侧两卡分别说明原图指纹变了只重算一张,基准侧指纹变了整点位重算">
-      <text x="340" y="22" text-anchor="middle" class="tb">align.json 台账:键 = 点位 + 文件名,一条记录装"全套"</text>
+    <svg viewBox="0 0 680 316" role="img" aria-label="开局检测粒度图:逆向对齐按点位、真实小图全局、LoRA与合成按检测区缺陷组合分别判定指纹,决定跳过或重做,前置全部成功后才归档旧models">
+      <text x="340" y="22" text-anchor="middle" class="tb">开局指纹检测:四个环节,各有各的判定粒度</text>
 
-      <rect x="25" y="42" width="310" height="230" rx="10" fill="#fbfaf6" stroke="#d8d2c0" stroke-width="1.5"/>
-      <text x="40" y="66" class="tb">align.json(一本总账)</text>
-      <text x="56" y="92" class="tm">└─ {点位}(每点位一组)</text>
-      <text x="72" y="112" class="tm">└─ recs(逐图记录)</text>
-      <rect x="88" y="124" width="150" height="24" rx="6" fill="#eaf2fe" stroke="#93b4f5"/>
-      <text x="163" y="140" text-anchor="middle" class="tm">"IMG_0003"(训练图)</text>
-      <rect x="88" y="154" width="170" height="24" rx="6" fill="#f3eefe" stroke="#ddd3f8"/>
-      <text x="173" y="170" text-anchor="middle" class="tm">"val/IMG_0102"(考卷)</text>
-      <text x="72" y="202" class="tm">一条记录装:</text>
-      <text x="88" y="222" class="tm">H(3×3 矩阵)· 摆正图与 .valid 路径</text>
-      <text x="88" y="240" class="tm">内点数/位移(质量)· 三枚指纹(右图)</text>
-      <text x="88" y="258" class="tm">摆正图本体另存 aligncache/ 下成对文件</text>
+      <text x="85" y="46" text-anchor="middle" class="tb">环节</text>
+      <text x="215" y="46" text-anchor="middle" class="tb">判定粒度</text>
+      <text x="382" y="46" text-anchor="middle" class="tb">比对什么指纹</text>
+      <text x="558" y="46" text-anchor="middle" class="tb">没变时复用什么</text>
 
-      <rect x="355" y="42" width="300" height="104" rx="10" fill="#fdf0e7" stroke="#e7b58a" stroke-width="1.8"/>
-      <text x="370" y="66" class="tb">指纹①② 原图的大小 + 修改时间</text>
-      <text x="370" y="92" class="tm">这张图被改过/换过 → 只重算这一张</text>
-      <text x="370" y="112" class="tm">(改标注、补拍一张 NG,秒级只动它)</text>
+      <rect x="25" y="56" width="120" height="48" rx="8" fill="#eaf2fe" stroke="#93b4f5"/>
+      <text x="85" y="84" text-anchor="middle" class="t">逆向对齐</text>
+      <rect x="155" y="56" width="120" height="48" rx="8" fill="#fbfaf6" stroke="#d8d2c0"/>
+      <text x="215" y="78" text-anchor="middle" class="tm">按点位</text>
+      <text x="215" y="96" text-anchor="middle" class="tm">(改一个点位只重算它)</text>
+      <rect x="285" y="56" width="180" height="48" rx="8" fill="#fbfaf6" stroke="#d8d2c0"/>
+      <text x="375" y="78" text-anchor="middle" class="tm">基准 json 哈希 + 训练 .bmp 元数据</text>
+      <text x="375" y="96" text-anchor="middle" class="tm">(增改 val/ 考卷不触发重对齐)</text>
+      <rect x="475" y="56" width="180" height="48" rx="8" fill="#e9f6ee" stroke="#86d3a1"/>
+      <text x="565" y="84" text-anchor="middle" class="tm">align.json(H + 有效检测区)</text>
 
-      <rect x="355" y="158" width="300" height="104" rx="10" fill="#fdecec" stroke="#f0a5a5" stroke-width="1.8"/>
-      <text x="370" y="182" class="tb">指纹③ 基准侧指纹</text>
-      <text x="370" y="202" class="tm">(基准图 + domain 分区 + 对齐参数,任一变动)</text>
-      <text x="370" y="226" class="tm">变了 → 该点位全部重算</text>
-      <text x="370" y="246" class="tm">(对齐依据变了,旧 H 全部作废)</text>
+      <rect x="25" y="112" width="120" height="48" rx="8" fill="#eaf2fe" stroke="#93b4f5"/>
+      <text x="85" y="140" text-anchor="middle" class="t">真实小图</text>
+      <rect x="155" y="112" width="120" height="48" rx="8" fill="#fbfaf6" stroke="#d8d2c0"/>
+      <text x="215" y="134" text-anchor="middle" class="tm">全局</text>
+      <text x="215" y="152" text-anchor="middle" class="tm">(目标 + --reuse 产品)</text>
+      <rect x="285" y="112" width="180" height="48" rx="8" fill="#fbfaf6" stroke="#d8d2c0"/>
+      <text x="375" y="134" text-anchor="middle" class="tm">NG 标注 SHA256 + 所属点位 json</text>
+      <text x="375" y="152" text-anchor="middle" class="tm">+ 实例数对账</text>
+      <rect x="475" y="112" width="180" height="48" rx="8" fill="#e9f6ee" stroke="#86d3a1"/>
+      <text x="565" y="134" text-anchor="middle" class="tm">patches/real_* 与规格单</text>
+      <text x="565" y="152" text-anchor="middle" class="tm">(auto_zones / real_records)</text>
 
-      <rect x="25" y="278" width="630" height="24" rx="8" fill="#e9f6ee" stroke="#86d3a1" stroke-width="1.6"/>
-      <text x="340" y="295" text-anchor="middle" class="t" fill="#15803d">命中 = 三枚指纹全对上 + 缓存文件在场 → 复用;差一枚 → 只重算那张并写回新指纹</text>
+      <rect x="25" y="168" width="120" height="48" rx="8" fill="#eaf2fe" stroke="#93b4f5"/>
+      <text x="85" y="196" text-anchor="middle" class="t">LoRA 训练</text>
+      <rect x="155" y="168" width="120" height="48" rx="8" fill="#fbfaf6" stroke="#d8d2c0"/>
+      <text x="215" y="190" text-anchor="middle" class="tm">按 (检测区, 缺陷)</text>
+      <text x="215" y="208" text-anchor="middle" class="tm">(改 A 区不重训 B 区)</text>
+      <rect x="285" y="168" width="180" height="48" rx="8" fill="#fbfaf6" stroke="#d8d2c0"/>
+      <text x="375" y="190" text-anchor="middle" class="tm">该组真实缺陷源指纹</text>
+      <text x="375" y="208" text-anchor="middle" class="tm">+ LoRA 全套超参</text>
+      <rect x="475" y="168" width="180" height="48" rx="8" fill="#e9f6ee" stroke="#86d3a1"/>
+      <text x="565" y="196" text-anchor="middle" class="tm">lora/{区}/{缺陷}/ 权重</text>
+
+      <rect x="25" y="224" width="120" height="48" rx="8" fill="#eaf2fe" stroke="#93b4f5"/>
+      <text x="85" y="252" text-anchor="middle" class="t">合成小图</text>
+      <rect x="155" y="224" width="120" height="48" rx="8" fill="#fbfaf6" stroke="#d8d2c0"/>
+      <text x="215" y="246" text-anchor="middle" class="tm">按 (检测区, 缺陷)</text>
+      <text x="215" y="264" text-anchor="middle" class="tm">三模式判定(下行)</text>
+      <rect x="285" y="224" width="180" height="48" rx="8" fill="#fbfaf6" stroke="#d8d2c0"/>
+      <text x="375" y="246" text-anchor="middle" class="tm">LoRA 指纹 + 分区 json + 超参</text>
+      <text x="375" y="264" text-anchor="middle" class="tm">(新增 OK 底图不触发重画)</text>
+      <rect x="475" y="224" width="180" height="48" rx="8" fill="#e9f6ee" stroke="#86d3a1"/>
+      <text x="565" y="246" text-anchor="middle" class="tm">齐备→跳过;差几张→补差;</text>
+      <text x="565" y="264" text-anchor="middle" class="tm">LoRA/分区变→清空重画</text>
+
+      <rect x="25" y="282" width="630" height="26" rx="8" fill="#fdf6e3" stroke="#f0e2b6" stroke-width="1.6"/>
+      <text x="340" y="300" text-anchor="middle" class="t" fill="#b45309">前置四环节全部成功 → 才归档旧 models/ 并从 0 训练;中途报错 → 上一版 best 完好无损</text>
     </svg>
-    <figcaption>对齐台账的一一对应机制:align.json 按"点位 → 文件名(考卷加 val/ 前缀)"两层键索引,每张照片一条记录,装着 H 矩阵、摆正图与 .valid 的路径、质量信息和三枚指纹;摆正图本体按「点位__文件名」在 aligncache/ 下成对存放。三枚指纹各管一摊:原图指纹管"哪张重算",基准侧指纹管"哪个点位整组重算"。</figcaption>
+    <figcaption>开局指纹检测(prep_plan.py):体检通过后、任何耗时计算开始前,一次性比对四个前置环节——逆向对齐按<b>点位</b>、真实小图按<b>全局</b>、LoRA 与合成按 <b>(检测区, 缺陷)</b> 组合,粒度各不相同;指纹口径:.bmp 用"文件名+大小+修改时间"(快),.json 与 .bmp.tmp 用 SHA256 内容哈希(准),再绑定各环节算法版本号(改了核心算法,旧产物自动作废)。合成小图支持"留旧补差"的增量模式;全部前置成功后才归档旧 models 并开始从 0 训练。</figcaption>
   </figure>
 
-  <p class="fnote">缓存存的是<b>"解 H + 回贴"整套结果</b>:每张照片一份 H(歪法各不相同;基准图自己 = 单位矩阵"不用摆")——阶段 2.3 投射蒙版抠真图、考试把标注搬回基准系,回头引用的都是台账里这同一份 H,<b>一处求解,处处复用</b>。</p>
-
-  <h4>细节⑤ H 的方向口径:正向取样,反向搬标注</h4>
-  <p>单应 <b>H 映射"基准坐标 → 待测坐标"</b>。于是有两趟方向相反的旅程:<b>回贴</b>时,对齐图(基准系)的每个位置 p,顺着 H 去<u>待测图</u>取 <b>H(p)</b> 处的像素;而<b>标注多边形</b>画在待测图(原图)上,考试要和基准系的预测对齐算分,搬回基准系必须<b>逆着走 H⁻¹</b>。</p>
-
-  <figure class="fig">
-    <svg viewBox="0 0 680 260" role="img" aria-label="H方向口径图:H从基准指向待测是回贴取样方向,H逆从待测指向基准是标注搬运方向">
-      <text x="140" y="26" text-anchor="middle" class="tb">基准坐标系(标准答案)</text>
-      <rect x="40" y="40" width="200" height="150" rx="6" class="metal"/>
-      <path d="M60,70 h80 M60,150 h80 M230,60 v80" class="metalln" opacity=".6"/>
-      <circle cx="140" cy="115" r="3" fill="#15803d"/>
-      <text x="140" y="132" text-anchor="middle" class="tm">p (100,100)</text>
-      <ellipse cx="150" cy="150" rx="16" ry="10" fill="none" stroke="#b45309" stroke-width="1.6" stroke-dasharray="4 3"/>
-
-      <text x="540" y="26" text-anchor="middle" class="tb">待测图坐标系(现场拍的,歪的)</text>
-      <rect x="440" y="40" width="200" height="150" rx="6" class="metal" transform="rotate(2 540 115)"/>
-      <path d="M465,72 h80 M465,152 h80 M625,62 v80" class="metalln" opacity=".6" transform="rotate(2 540 115)"/>
-      <circle cx="552" cy="108" r="3" fill="#15803d"/>
-      <text x="552" y="125" text-anchor="middle" class="tm">H(p) ≈ (107,103)</text>
-      <ellipse cx="566" cy="146" rx="16" ry="10" class="defect"/>
-
-      <path d="M 246,56 C 300,42 380,42 434,56" fill="none" stroke="#15803d" stroke-width="2.2" marker-end="url(#ah1)"/>
-      <text x="340" y="40" text-anchor="middle" class="tb" fill="#15803d">H:基准 → 待测(取样方向)</text>
-      <text x="340" y="72" text-anchor="middle" class="tm">回贴:每个基准位置 p,</text>
-      <text x="340" y="86" text-anchor="middle" class="tm">去待测图取 H(p) 处的像素</text>
-
-      <path d="M 434,184 C 380,200 300,200 246,184" fill="none" stroke="#6d28d9" stroke-width="2.2" stroke-dasharray="7 4" marker-end="url(#ah1)"/>
-      <text x="340" y="208" text-anchor="middle" class="tb" fill="#6d28d9">H⁻¹:待测 → 基准(搬标注方向)</text>
-      <text x="340" y="228" text-anchor="middle" class="tm">标注(橙圈)画在待测图上,</text>
-      <text x="340" y="242" text-anchor="middle" class="tm">搬回基准系与预测对齐算分,须逆走 H⁻¹</text>
-    </svg>
-    <figcaption>H 的方向口径:同一个 H,两趟相反的旅程——回贴取样顺着 H 走(绿实线);把待测图上的标注多边形搬回基准系考试计分,逆着走 H⁻¹(紫虚线)。</figcaption>
-  </figure>
+  <h4>细节⑤ H 的方向:只用来"誊地图",谁都不搬照片</h4>
+  <p>单应 <b>H 映射"基准坐标 → 照片坐标"</b>,方向只有一个用途:把基准图上的分区蒙版<b>正向投射</b>到每张照片上(二值蒙版逐点搬家、最近邻插值,不产生灰边),得到那份与照片同样歪斜的"有效检测区"。照片像素与标注多边形<b>永远待在原地</b>——训练切块、贴图、考试推理全部直接在原图坐标系进行,<b>没有任何"搬运标注"的环节</b>(老版要在"掰正后的副本图"上考试、把标注誊来誊去,新版已彻底删除,少了一整套易错的方向口径)。</p>
 
   <div class="co plain">
     <span class="tag">💡 大白话:一张"查址对照表"</span>
-    <p>H 就像一张「<b>标准地址 → 现场地址</b>」的对照表。把现场照片搬回标准地图,是<b>顺着查</b>:标准地图上每个位置,按表去现场取对应像素填进来;把现场图上画的圈(标注)搬回标准地图,是<b>逆着查</b>:现场地址反查标准地址。表只有一张,方向别搞反——反了就把图搬歪了。</p>
+    <p>H 就像一张「<b>标准地址 → 现场地址</b>」的对照表:想知道标准地图上的某块地盘出现在某张照片的哪个位置,顺着查就行。<b>照片不搬、标注不搬</b>——要动的只有那张几 KB 的分区蒙版;搬便宜的,不搬贵的。</p>
   </div>
 
   <h4>细节⑤附图一 · 蒙版的正向投射(H):把"地盘"誊到照片上用</h4>
-  <p>分区蒙版画在<b>基准图</b>(基准坐标系)上,而缺陷标注画在<b>每张歪的照片</b>上——两个坐标系不同,没法直接求交。阶段 2.3 的做法:把基准图上的各检测区蒙版按 H <b>正向投射</b>(二值蒙版逐点搬家、最近邻插值,不产生灰边),得到一份<b>与照片同样歪斜的临时蒙版</b>,直接覆在照片上用;用完即弃,<b>不落盘、不改分区 json</b>。</p>
+  <p>分区蒙版画在<b>基准图</b>(基准坐标系)上,而缺陷标注画在<b>每张歪的照片</b>上——两个坐标系不同,没法直接求交。做法:把基准图上的各检测区蒙版按 H <b>正向投射</b>(二值蒙版逐点搬家、最近邻插值,不产生灰边),再经 ±10px 边缘吸附,得到<b>与照片同样歪斜的"有效检测区"</b>,直接覆在照片上用;结果以压缩蒙版(zb64 RLE)存进 align.json 台账,<b>分区 json 原件不动</b>。</p>
 
   <figure class="fig">
     <svg viewBox="0 0 680 300" role="img" aria-label="蒙版正向投射示意图:基准图上的检测区蒙版按H投射成同样歪斜的临时蒙版覆在照片上,用于判定缺陷归属与量对比度、定背景中值">
@@ -1389,75 +1370,28 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
       <text x="445" y="207" text-anchor="middle" class="tm">🆕 临时蒙版与照片同样歪斜,覆上来用</text>
 
       <rect x="35" y="228" width="610" height="60" rx="9" fill="#eaf2fe" stroke="#93b4f5" stroke-width="1.6"/>
-      <text x="55" y="250" class="t">① 归属:标注多边形 ∩ 各分区投射蒙版 → 重叠面积最大的分区赢得该缺陷</text>
-      <text x="55" y="274" class="t">② 测量:在照片原生像素上找区内干净环带量对比度、定 bg_fill ③ 用完即弃,不落盘</text>
+      <text x="55" y="250" class="t">① 归属:标注多边形 ∩ 圆滑有效检测区 → 重叠面积最大的区赢得该缺陷</text>
+      <text x="55" y="274" class="t">② 测量 / 贴图 / 圈考场:全在照片原生像素上按"有效检测区"进行 ③ 存台账</text>
     </svg>
-    <figcaption>蒙版正向投射:分区蒙版定义在基准图上(左,💾 永不修改);阶段 2.3 把它按 H 投射成<b>与照片同样歪斜的临时蒙版</b>(右,示意图简化为旋转,实际还含透视分量),直接覆在照片原生像素上——判归属、量对比度、定 bg_fill 全部在照片坐标系完成,因此抠出的真实缺陷小图(real_patches)零插值失真;临时蒙版用完即弃、不落盘。</figcaption>
+    <figcaption>蒙版正向投射:分区蒙版定义在基准图上(左,💾 永不修改);按 H 投射成<b>与照片同样歪斜的有效检测区</b>(右,示意图简化为旋转,实际还含透视分量),直接覆在照片原生像素上——判归属、量对比度、去背景、贴图圈地、考试圈考场全部在照片坐标系完成,因此抠出的真实小缺陷图零插值失真;吸附后的有效检测区以压缩蒙版存进 align.json。</figcaption>
   </figure>
 
   <div class="co why">
     <span class="tag">🎯 为什么投射蒙版,而不是把标注搬去基准系比?</span>
-    <p>因为抠真实小图必须落在<b>原图原生像素</b>上做——照片一旦被重采样到基准系,缺陷边缘就糊了;工作现场只能在照片坐标系里。而蒙版是<b>二值图</b>(只有"是/否"),投射它没有任何画质损失。<b>要搬就搬便宜的那方</b>:让几 KB 的蒙版飞到照片那边去,而不是让几十 MB 的照片像素飞过来。</p>
+    <p>因为抠真实小图必须落在<b>原图原生像素</b>上做——照片一旦被重采样到基准系,缺陷边缘就糊了;工作现场只能在照片坐标系里。而蒙版是<b>二值图</b>(只有"是/否"),投射它没有任何画质损失。<b>要搬就搬便宜的那方</b>:让几 KB 的蒙版飞到照片那边去,而不是让几十 MB 的照片像素飞过来。如今这套"逆向"思想贯穿到底:<b>连考试推理也直接在 val 原图上做</b>——模型答卷、老师答案、考场范围全在同一个坐标系,谁都不用搬。</p>
   </div>
 
-  <h4>细节⑤附图二 · 标注的反向搬运(H⁻¹):把"批注"誊回地图上计分</h4>
-  <p>考试在<b>对齐缓存图(基准系)</b>上切块推理——模型的报警圈画在"搬正"的图上;老师的标注却画在<b>歪的原片</b>上。计分前,把每个标注多边形的<b>顶点逐一经 H⁻¹ 换算</b>到基准系(坐标取整后 <code class="inl">fillPoly</code> 栅格化成一张临时掩码),再与报警像素求交集。标注文件与照片原件都不被修改,搬的只是"计分用的临时栅格"。</p>
-
-  <figure class="fig">
-    <svg viewBox="0 0 680 300" role="img" aria-label="标注反向搬运示意图:照片上的橙色标注多边形四个顶点按H逆逐点换算到基准系栅格化,与对齐图上的红色报警圈求交集计分">
-      <text x="340" y="24" text-anchor="middle" class="tb">标注反向搬运(H⁻¹):把照片上的"批注"誊回基准系计分</text>
-
-      <g transform="rotate(2.5 122 122)">
-        <rect x="35" y="60" width="175" height="125" rx="6" class="metal"/>
-        <path d="M50,80 h145 M50,165 h145" class="metalln" opacity=".5"/>
-        <ellipse cx="122" cy="118" rx="17" ry="12" class="defect"/>
-        <path d="M100,100 L146,96 L152,130 L118,142 L96,126 Z" fill="none" stroke="#b45309" stroke-width="2"/>
-        <circle cx="100" cy="100" r="3" fill="#b45309"/>
-        <circle cx="146" cy="96" r="3" fill="#b45309"/>
-        <circle cx="152" cy="130" r="3" fill="#b45309"/>
-        <circle cx="118" cy="142" r="3" fill="#b45309"/>
-      </g>
-      <text x="122" y="50" text-anchor="middle" class="t">现场照片(歪的):老师画的橙圈</text>
-      <text x="122" y="207" text-anchor="middle" class="tm">💾 .bmp.tmp 标注原件不动</text>
-      <text x="122" y="224" text-anchor="middle" class="tm">(4 个顶点各记一个坐标)</text>
-
-      <path d="M 218,122 L 290,122" fill="none" stroke="#b45309" stroke-width="2.2" stroke-dasharray="7 4" marker-end="url(#ah1)"/>
-      <text x="255" y="100" text-anchor="middle" class="tm" fill="#b45309">顶点逐个 H⁻¹ 换算</text>
-      <text x="255" y="144" text-anchor="middle" class="tm">取整 → fillPoly 栅格化</text>
-
-      <rect x="300" y="60" width="175" height="125" rx="6" class="metal"/>
-      <path d="M315,80 h145 M315,165 h145" class="metalln" opacity=".5"/>
-      <ellipse cx="387" cy="118" rx="17" ry="12" class="defect"/>
-      <path d="M362,102 L410,98 L416,132 L383,144 L359,128 Z" fill="#15803d" opacity=".22"/>
-      <path d="M362,102 L410,98 L416,132 L383,144 L359,128 Z" fill="none" stroke="#b45309" stroke-width="2"/>
-      <circle cx="362" cy="102" r="3" fill="#b45309"/>
-      <circle cx="410" cy="98" r="3" fill="#b45309"/>
-      <circle cx="416" cy="132" r="3" fill="#b45309"/>
-      <circle cx="383" cy="144" r="3" fill="#b45309"/>
-      <ellipse cx="387" cy="119" rx="27" ry="19" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-dasharray="6 4"/>
-      <text x="387" y="50" text-anchor="middle" class="t">对齐缓存图(基准系,正的)</text>
-      <text x="387" y="207" text-anchor="middle" class="tm">🆕 计分用的橙圈栅格(临时)</text>
-
-      <path d="M 483,122 L 506,122" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
-      <rect x="512" y="70" width="150" height="105" rx="9" fill="#fdecec" stroke="#f0a5a5" stroke-width="1.6"/>
-      <text x="587" y="92" text-anchor="middle" class="tb" font-size="13">交集计分</text>
-      <text x="587" y="112" text-anchor="middle" class="tm">橙圈栅格 ∩ 红圈报警</text>
-      <text x="587" y="130" text-anchor="middle" class="tm">= 绿色重合像素</text>
-      <text x="587" y="150" text-anchor="middle" class="tm">累加 → 总交集 / 命中数</text>
-      <text x="587" y="170" text-anchor="middle" class="tm">→ 综合质量分</text>
-
-      <text x="340" y="254" text-anchor="middle" class="tm">模型的报警圈(红虚线)画在"搬正"的对齐图上;老师的橙圈画在歪的原片上——不换算直接叠,两个圈会错开好几个像素</text>
-      <text x="340" y="274" text-anchor="middle" class="tm" fill="#15803d">H⁻¹ 只换算顶点(多边形形状保真),栅格化后求交集;标注文件与照片原件都不被修改</text>
-    </svg>
-    <figcaption>标注反向搬运:老师标注(橙圈)的<b>顶点</b>画在歪的照片上(左,💾 原件不动);考试计分前每个顶点按 H⁻¹ 逐点换算到基准系并栅格化成临时掩码,与模型画在"搬正"对齐图上的报警圈(红虚线)求交集(绿)——总交集与命中数由此而来。只搬顶点而非整图,多边形形状保真、计算量也最小。</figcaption>
-  </figure>
+  <div class="co plain">
+    <span class="tag">💡 大白话:考试为什么连"换算"都省了?</span>
+    <p>老版要把照片"摆正"后再考试:老师画的圈和模型圈的圈分属两个坐标系,得拿着换算表誊来誊去,方向搞反全盘皆错。新版直接<b>在 val 原图上考试</b>——模型看到的是原片、老师画的是原片、考场范围(圆滑有效检测区)也誊到了原片上,三方同一个坐标系,拿过来就能比。</p>
+  </div>
 
   <div class="co plain">
     <span class="tag">💡 大白话</span>
-    <p>像全班合影要"对表":以班长(基准图)站姿为标准,每个人(每张照片)挪一步转半度对齐他。只看<b>工装上的花纹</b>(domain 分区内的角点)对表——别拿背景里的路灯对,那不准。挪歪了对不上的(对齐失败),练习册和考卷里都除名。</p>
+    <p>像全班合影"对表":以班长(基准图)为标准,<b>每个人原地不动</b>,把班长的"名牌位置表"(分区)按每个人的站姿誊一份发到手里。对表只看<b>工装上的花纹</b>(domain 分区内的角点)——别拿背景里的路灯对,那不准。对不上的(对齐失败),练习册和考卷里都除名。</p>
   </div>
-  <h3>6.4 对齐失败隔离(新版)</h3>
-  <p>对齐失败的图不再只是"剔除出名单"——而是<b>成对移出隔离</b>:本轮全部图(点位根目录训练图 + val/ 考卷)先整体对齐一遍收集失败项,再把根目录失败图移入 <code class="inl">.tmp/{产品}/align_failed/{点位}/</code>、val/ 下的考卷移入对应隔离位置,并逐条追加记录 <code class="inl">moved.jsonl</code>。被隔离的图本轮训练与考试都不再消费;数据修好后下次启动全部重算,自动"归队"。</p>
+  <h3>6.4 对齐失败隔离</h3>
+  <p>对齐失败的图不再只是"剔除出名单"——而是<b>成对移出隔离</b>:本轮全部图(点位根目录训练图 + val/ 考卷)先整体对齐一遍收集失败项,再把根目录失败图移入 <code class="inl">.tmp/{产品}/align_failed/{点位}/</code>、val/ 下的考卷移入对应隔离位置,并逐条追加记录 <code class="inl">moved.jsonl</code>。被隔离的图本轮训练与考试都不再消费;数据修好后下次启动全部重算,自动"归队"。(--reuse 复用产品里配准失败的 NG 图只<b>跳过</b>,复用产品的素材永不移动。)</p>
   <div class="co plain">
     <span class="tag">💡 大白话:请出考场、登记在册</span>
     <p>对不上号的照片当场请出考场并登记(移到隔离区 + 记台账)——不带病上场,也不悄悄失踪;下次修好照片(或调好对齐参数)重新开考,它自己会回来。</p>
@@ -1466,8 +1400,8 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
 
 <!-- ================= 第 7 章 ================= -->
 <section id="split">
-  <div class="chap"><span class="chapno">第 7 章</span><h2>事件线 2~4 · 真实小图、LoRA 合成与分卷配额</h2></div>
-  <div class="chapref">对应 README 事件线 2.3~2.4(align.py·auto_bind_zones)+ 3(lora_synth.py)+ 4(budget.py·split_train_earlystop)</div>
+  <div class="chap"><span class="chapno">第 7 章</span><h2>小图池、专属 LoRA 与统一预算</h2></div>
+  <div class="chapref">对应 README 宏观大流程 2~4(阶段1 LoRA / 阶段2 小图池 / 统一预算)+ lora_synth.py / budget.py 源码</div>
 
   <figure class="fig">
     <svg viewBox="0 0 680 320" role="img" aria-label="新版分卷图:点位根目录全部合格图组成训练池并八二分出早停集上限十张,val独立目录放手工考卷绝不进训练池">
@@ -1478,11 +1412,11 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
       <text x="120" y="106" text-anchor="middle" class="tm">全部入池</text>
       <rect x="220" y="68" width="160" height="52" rx="8" fill="#fff" stroke="#b45309" stroke-width="1.5"/>
       <text x="300" y="88" text-anchor="middle" class="t">NG 图(带真缺陷标注)</text>
-      <text x="300" y="106" text-anchor="middle" class="tm">入池,真缺陷 255 屏蔽 + 像素修补</text>
+      <text x="300" y="106" text-anchor="middle" class="tm">入池供抠缺陷实例;含标注切块被跳过</text>
       <line x1="60" y1="140" x2="360" y2="140" stroke="#86d3a1"/>
       <text x="80" y="164" class="tb" fill="#15803d">80% 训练底图</text>
       <text x="80" y="182" class="tm">全部使用,造题刷题</text>
-      <text x="80" y="200" class="tm">(不再设 500 上限/加权抽签)</text>
+      <text x="80" y="200" class="tm">(切块自动跳过含标注的脏块)</text>
       <text x="255" y="164" class="tb" fill="#166534">20% 早停集</text>
       <text x="255" y="182" class="tm">每点位上限 10 张</text>
       <text x="255" y="200" class="tm">固定题集,每晚算 val_loss</text>
@@ -1499,10 +1433,10 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
       <text x="422" y="98" text-anchor="middle" class="tm">隔离</text>
 
       <text x="340" y="270" text-anchor="middle" class="tm">固定种子分卷:同 seed 同切分(可复现);点位哈希偏移——单点位结果不受其他点位增删影响</text>
-      <text x="340" y="290" text-anchor="middle" class="tm">自适应变体数:V = min(5, 200 ÷ 平均底图数);图极多(平均 &gt; 200)时按轮分片轮换,跨轮 100% 覆盖全部底图</text>
+      <text x="340" y="290" text-anchor="middle" class="tm">统一注水预算:√(T×D) 权重分配单轮正样本 E;验证干净块全局 ≤1200;超大区按 num_shards 分片轮转</text>
       <text x="340" y="308" text-anchor="middle" class="tm">另:对齐失败的图自动隔离出池(见 6.4),小孔自动补块防切碎(见 8.1)</text>
     </svg>
-    <figcaption>新版分卷三条线:① <b>考卷</b> = {点位}/val/ 独立目录里人工放入的手工考卷,绝不进训练池;② <b>训练池</b> = 点位根目录全部对齐合格图(OK + NG;NG 的真缺陷 255 屏蔽并做像素级修补),全量使用、不再设名单上限;③ 训练池再 <b>8:2</b> 分出<b>早停集</b>(每点位上限 10 张,固定题集算 val_loss)。</figcaption>
+    <figcaption>分卷三条线:① <b>考卷</b> = {点位}/val/ 独立目录里人工放入的手工考卷,绝不进训练池;② <b>训练池</b> = 点位根目录全部合格图(OK 贡献干净切块;NG 贡献缺陷实例,其含标注切块被整块跳过);③ 训练池再 <b>8:2</b> 分出<b>早停集</b>(每点位上限 10 张、全产品干净块封顶 1200,固定题集算 val_loss)。</figcaption>
   </figure>
 
   <div class="co plain">
@@ -1510,16 +1444,18 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
     <p><b>练习册</b>(训练底图造的题)——天天刷,题是现场贴出来的合成缺陷;<b>模拟卷</b>(早停集)——固定一批题每晚考一次,成绩只用来判断"还要不要继续练"(早停);<b>封存的期末卷</b>(val/ 独立考卷)——真缺陷、模型从未见过,只有它说了算谁能"毕业"当 best。三卷各司其职,谁也不能替谁。</p>
   </div>
 
-  <h3>7.1 用量自适应:变体数 V 与分片轮换(budget.py)</h3>
+  <h3>7.1 统一注水预算:一份账本管出题与合成(budget.py)</h3>
   <ul>
-    <li><b>变体数 V 自适应</b>:V = min(5, 200 ÷ 各点位平均训练底图数)。图少(≤40 张/点位)→ V=5,每块每轮出 5 个变体;图多(40~200)→ V 按比例收敛,保证<b>全部底图每轮都出场</b>;</li>
-    <li><b>图极多 → 分片轮换</b>:平均超过 200 张时 V&lt;1,启用按轮分片(num_shards = ⌈1/V⌉),每轮只训一个分片(约 200 张/点位),<b>跨轮轮换 100% 覆盖全部底图,绝不丢任何一张图</b>;</li>
-    <li><b>早停集上限 10 张</b>:8:2 分卷时每点位最多抽 10 张做早停集,其余全部当训练底图;</li>
-    <li><b>切块完整性补块</b>:常规重叠网格之外,自动检查每个绑定分区的每个连通域——外接框装得下却没有网格块<b>完整包含</b>它时,补一个以其中心为锚的图块(防止 &lt;1/120 的极小孔被网格线切碎)。</li>
+    <li><b>先数家底</b>:预切统计每个背景域 (点位 p, 检测区 z) 的<b>干净块数 T</b>(跳过含标注块)与绑定缺陷种数 D——这是全部配额的出发点;</li>
+    <li><b>总预算</b>:单轮正样本总数 B = clip(round(v_base × T 总), Σ下界, min(<span class="kn">16000</span>, Σ上界)),其中 v_base = clip(200 ÷ 底图总数, 1, 5);</li>
+    <li><b>注水分配</b>:按权重 <b>W = √(T×D)</b> 把 B 分给各区——介于"按面积摊(大区淹没小区)"与"完全均摊(小区过拟合)"之间的折中;下界保底 <b>max(100×D, T÷轮数)</b>(极小/稀有区每种缺陷每轮至少 100 块),上界封顶 <b>5×T</b>(单块单轮最多重复 5 次);</li>
+    <li><b>分片轮转</b>:某区 T 超过其配额 E 时自动拆 num_shards = ⌈T÷E⌉(≤轮数)个分片跨轮轮转,保证最大轮数内 100% 底图块参训;<b>轮转完毕前早停不生效</b>;</li>
+    <li><b>早停集封顶</b>:每点位 ≤10 张之外,全产品验证干净块全局封顶 <span class="kn">1200</span>(= 2400 个正负验证样本),防 100+ 点位验证超时;</li>
+    <li><b>切块完整性补块</b>:常规重叠网格之外,自动检查每个分区的每个连通域——外接框装得下却没有网格块<b>完整包含</b>它时,补一个居中块(同样须不含标注)。</li>
   </ul>
   <div class="co plain">
-    <span class="tag">💡 大白话:教材再多也不扔</span>
-    <p>题库(图)少了就每页多刷几遍(V=5);教材多了就每天轮换一批分册讲,一学期下来保证每页都讲到——<b>绝不因为图多就扔图</b>;极小的知识点(小孔)哪怕落在两页夹缝里,也单独补印一页。</p>
+    <span class="tag">💡 大白话:给大小区"注水"分教材</span>
+    <p>把单轮训练量想象成一桶水,按 √(地盘×题种) 的比例往每个"杯子"(背景域)里倒:大区杯子大就多倒,小区杯子小就少倒——但每只杯子都有<b>保底线</b>(每种题至少 100 块)和<b>封顶线</b>(单块最多重复 5 次),谁也不会饿死、谁也不会撑死。地盘大到一轮喝不完的,自动排队分片、跨轮轮着喝,一轮都不落下。</p>
   </div>
 
   <h3>为什么要这么分?(四连问)</h3>
@@ -1528,38 +1464,38 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
     <p>考试选型(best)面对的必须是模型<b>从未见过</b>的真实缺陷图。考卷单独放在 <code class="inl">{点位}/val/</code> 目录、由人工手工放入,从目录层面就与训练池物理隔离——想漏题都难;训练侧任何扫描都跳过它。</p>
   </div>
   <div class="co why">
-    <span class="tag">🎯 ② NG 图为什么敢整批当底图?</span>
-    <p>现场采集的图很宝贵。借的是 NG 图上<b>大片无缺陷的正常表面</b>来贴合成缺陷;图上原有的真缺陷区<b>双保险处理</b>:标签层标 <span class="kn">255</span>(不教不罚)+ 像素层 <b>INPAINT 修补</b>(把真缺陷抹成干净背景,详见 8.7)——既不误导模型,还消除"真缺陷黑影污染邻域"的隐性毒害;合成缺陷落点也自动避开。</p>
+    <span class="tag">🎯 ② NG 图还能进训练池吗?</span>
+    <p>能,但角色变了:NG 图负责<b>贡献缺陷实例</b>(抠真实小图、训 LoRA、实测规格);它的图像部分不再被修补利用——<b>凡沾到标注(含外扩 4px)的 512 切块整块跳过</b>,宁缺毋滥。比"修补后再用"更稳:任何修补都是"猜"出来的纹理,猜错了就是假课本;跳过脏块,留下的每一块都是 100% 真实无瑕的相机像素。</p>
   </div>
   <div class="co why">
-    <span class="tag">🎯 ③ 底图真缺陷为什么要外扩 8px 再标 255?</span>
-    <p>人工画框往往<b>紧贴缺陷内侧</b>,外圈几像素其实是缺陷的过渡边。不外扩的话,这段过渡会被当成"正常背景 0"教给模型,模型就<b>不敢报真缺陷的边缘</b>。新版外扩量加倍到 <span class="kn">8px</span>(ANN_DILATE=8,椭圆核整圈等距),再叠加像素修补双保险。</p>
+    <span class="tag">🎯 ③ 为什么"跳过"而不是"修补后接着用"?</span>
+    <p>老版把真缺陷 inpaint 抹平后继续当干净背景用,还要给抹平区标 255 忽略——修补是"猜"纹理,猜错就教假课,忽略区还白白浪费一块地皮。新版直接<b>跳过含标注的块</b>:零猜测、零风险。某个小检测区若因此一块干净块都不剩,系统开局就红字提示"补 15~20 张该区的 OK 底图"(8:2 划分把某区唯一干净图分进早停集时,还会自动把它换回训练池)。</p>
   </div>
   <div class="co why">
     <span class="tag">🎯 ④ 训练集切块为什么要随机抖动?</span>
-    <p>切块位置在网格上随机偏移 <span class="kn">±stride/2</span>(±192px),防止工件的孔位、边角永远出现在同一坐标被<b>死记硬背</b>。缺陷块的抖动多一道约束:<b>抖完分区必须还在块内装得下</b>(试 6 次,不行就退回原网格坐标)。早停集/考卷不抖——题目固定,分数才可比。</p>
+    <p>切块位置在网格上随机偏移 <span class="kn">±192px</span>(=步长 384 的一半),防止零件的孔位、边角永远出现在同一坐标被<b>死记硬背</b>。抖动带约束:<b>6 次尝试</b>内必须既避开一切标注(含 4px 外扩)、又保证检测区并集在块内不少于 16px,不行就退回原网格坐标。早停集/考卷不抖——题目固定,分数才可比。</p>
   </div>
 
-  <h3>7.2 阶段 2.3~2.4 · 真实缺陷小图:自动归属 + 原图零失真抠取</h3>
-  <p>阶段 2 对齐完成后,程序立刻干一件老版要人工干几天的事——<b>把每个真缺陷从原图上抠成素材</b>(<code class="inl">align.py·auto_bind_zones</code>),对每个非「排除」标注多边形走五步:</p>
+  <h3>7.2 真实小缺陷图:圆滑区归属 + 原图零失真抠取</h3>
+  <p>逆向对齐完成后,程序立刻干一件老版要人工干几天的事——<b>把每个真缺陷从原图上抠成素材</b>(<code class="inl">align.py</code>),对每个非「排除」标注多边形走五步:</p>
   <ol>
-    <li><b>定归属</b>:把基准图各检测分区蒙版经单应 H <b>投射到原图坐标系</b>,与缺陷多边形求交集——<b>重叠面积最大的分区</b>赢得这个缺陷(同名分区跨点位/跨 --reuse 产品共享);</li>
-    <li><b>完整保留轮廓</b>:掩码就用<b>整条人工标注多边形</b>——贴边缺陷画出界的部分<b>不裁掉</b>(沿分区边界裁切会把肉眼一体的缺陷"腰斩",旋转贴图时还带异色伪影);</li>
-    <li><b>掩码外统一填平</b>:从"区内 + 标注外 + 邻近其他标注外"的干净像素测出背景中值 <b>bg_fill</b>,再把掩码外的一切像素——外扩边距、邻近其他缺陷/「排除」区、检测区外黑槽——<b>全部填成 bg_fill</b>:每张小图严格只含当前这 1 个缺陷,且旋转贴图时边缘带出的是纯平背景而非异色纹理;</li>
-    <li><b>零失真抠取</b>:直接在<b>未经透视插值的原始 .bmp</b> 上按标注外框 + <span class="kn">8px</span> 边距抠图,存 <code class="inl">.tmp/{产品}/real_patches/{缺陷名}/</code>;</li>
-    <li><b>实测规格</b>:顺带量出每个实例的面积、长边、对比度(外扩 2~7px 干净环带 |缺陷−背景| 的 p80,环带同样避开邻近标注)、离分区边界多近——汇成第 2 章讲的 auto_zones 规格单。</li>
+    <li><b>定归属(用圆滑区)</b>:缺陷多边形与各<b>圆滑有效检测区</b>求交集——<b>交集面积最大的区</b>赢得这个缺陷(贴边缺陷不会因训练态的向内吸附而被误判出区/误入邻区);按 <b>{检测区}/{缺陷}</b> 归档,同名区跨点位、跨 --reuse 合并;</li>
+    <li><b>完整保留轮廓</b>:掩码就用<b>整条人工标注多边形</b>——贴边缺陷画出界的部分<b>不裁掉</b>(沿检测区边界裁切会把肉眼一体的缺陷"腰斩");</li>
+    <li><b>掩码外中值去背景</b>:优先取小图局部<b>「有效检测区 ∩ 掩码外 ∩ 无标注」</b>像素的灰度中值,把掩码外的一切像素(外扩边距、邻近其他缺陷/「排除」区、区外背景)统一填平(环带内没货则退回整区中值)——每张小图严格只含 1 个缺陷,旋转贴图时边缘带出的是纯平背景而非异色纹理;</li>
+    <li><b>零失真抠取</b>:直接在<b>原始 .bmp</b> 上按标注外框 + <span class="kn">8px</span> 边距抠图,存 <code class="inl">patches/{检测区}/{缺陷}/real_*.png</code>;</li>
+    <li><b>实测规格</b>:顺带量出每个实例的面积、对比度(外扩 2~7px 干净环带 |缺陷−背景| 的 p80,环带避开邻近标注)与<b>明暗极性</b>——汇成第 2 章讲的 auto_zones 规格单。</li>
   </ol>
   <div class="co plain">
     <span class="tag">💡 大白话:剪标本,瓶里只留这一件</span>
-    <p>真实小图像"从现场照片上剪标本":照片本身一张不动(对齐后的整图另有缓存),标本按<b>老师画的整圈轮廓</b>剪——圈到分区分界线外也不截断;标本瓶(8px 边距的小图)里凡是圈外的杂物(邻缺陷、反光区、黑槽)一律铺成同一层"干净底色"(bg_fill)——瓶里这件标本<b>百分百纯净</b>,拿去量尺寸、当教材、当 LoRA 的形变模板都不会量错、带脏。</p>
+    <p>真实小图像"从现场照片上剪标本":照片本身一张不动,标本按<b>老师画的整圈轮廓</b>剪——圈到检测区边界外也不截断;标本瓶(8px 边距的小图)里凡是圈外的杂物(邻缺陷、反光区、区外背景)一律铺成同一层"干净底色"(有效检测区的背景中值)——瓶里这件标本<b>百分百纯净</b>,拿去量尺寸、当教材、当 LoRA 的形变模板都不会量错、带脏。</p>
   </div>
 
-  <h3>7.3 阶段 3 · 内置 FLUX LoRA:现场量产合成缺陷小图</h3>
-  <p>规格和真实小图都有了,还嫌样本少?train 把 synth_assets 那套"裂变兵工厂"<b>整个搬进了体内</b>(<code class="inl">lora_synth.py</code>),分三步(全部带 ⚡ 缓存,按 LoRA 权重指纹与配额校验,齐备则 0.1 秒跳过):</p>
+  <h3>7.3 阶段 1 + 阶段 2 · 专属 LoRA 与双源小图池</h3>
+  <p>规格和真实小图都有了,还嫌样本少?train 把"裂变兵工厂"<b>整个搬进了体内</b>(<code class="inl">lora_synth.py</code>),按 {检测区}/{缺陷} 逐组执行(全部带 ⚡ 开局指纹检测,没变则 0.1 秒跳过):</p>
   <ol>
-    <li><b>3.1 动态切片</b>:围绕每个真实缺陷随机偏移裁 <span class="kn">1~4</span> 张 512×512 训练图块(实例越少每例切越多:k = ⌈60÷实例数⌉ 夹 1~4,总上限 <span class="kn">240</span> 张),块内其他缺陷/排除区/越界部分抹平为背景,配三区软权重(核心 1.0 → 8px 环带 0.4 → 外部 0);</li>
-    <li><b>3.2 LoRA 训练</b>:每类缺陷单独给 FLUX.1-Fill-dev 训一个 LoRA(1000 步洗牌流匹配,参数见 3.1 配置),权重与 manifest 存 <code class="inl">models/{产品}/lora/{缺陷名}/</code>,manifest 记录<b>标注指纹</b>——标注没变就直接复用,变了自动重训;</li>
-    <li><b>3.3 按配额合成</b>:每个(点位, 分区)该产多少由阶段 4 的配额公式算(与 synth_assets 同款:<b>N = max(m_p^eff, ⌈m_p^eff × C<sub>p,z</sub> ÷ B<sub>p,z</sub>⌉)</b>);形变模板<b>直接复用 real_patches 的掩码</b>——随机形变缩放后外扩 8px 送 FLUX+LoRA 多卡并行重绘(最外沿 4px 余弦羽化)→ 前后差分<b>双阈值滞后抠取</b>(<span class="kn">3.5σ</span> 核心种子 + <span class="kn">1.8σ</span> 连通生长,σ 只在分区内测,95 分位信噪比门控,整孔缺陷 ≥70% 覆盖自动闭合)→ 紧包 <span class="kn">+8px</span> 裁成合成缺陷小图,<b>掩码外统一填 bg_fill</b>(与真实小图同一纯化原则),按 <code class="inl">synth_cache/{缺陷}/{点位}__{分区}/</code> 归档;配额有缺口自动补画,最多 <span class="kn">3 轮</span>。</li>
+    <li><b>阶段 1 · 切块与专属 LoRA</b>:围绕每个真实缺陷从<b>原图</b>裁 512 训练块,目标<b>凑够 60 张</b>(k=⌈60÷实例数⌉ 夹 1~4,总上限 240)——<b>不做任何 inpaint</b>:块内其他标注直接置损失权重 0,目标缺陷不管在区内还是贴边<b>都直接外扩 8px</b> 软权重(1.0→0.4);每组合单独训一支 FLUX.1-Fill LoRA(<span class="kn">1000 步</span>,多卡 DDP 并行),存 <code class="inl">.tmp/{产品}/lora/{检测区}/{缺陷}/</code>;</li>
+    <li><b>阶段 2 · 双源小图</b>:真实小图从原图抠取(7.2 五步);合成小图用该组合的 LoRA 在<b>目标产品自己的底图</b>上重绘——形状模板取自真实掩码的<b>洗牌轮转 + 随机弹性形变</b>,重绘选点避开已有标注,最外沿 4px 余弦羽化;前后<b>双阈值差分</b>(<span class="kn">3.5σ</span> 种子 + <span class="kn">1.8σ</span> 连通生长,σ 只在有效检测区内测,95 分位信噪比门控,整孔 ≥70% 覆盖自动闭合)抠出后外扩 8px、中值去背景,存 <code class="inl">patches/{检测区}/{缺陷}/synth_*.png</code>;</li>
+    <li><b>合成多少由阶段 3 反推</b>:合成小图唯一用途就是贴进训练块,配额直接由阶段 3 的贴图需求同源导出(公式见下方算例);开局指纹支持三种模式——<b>齐备跳过 / 留旧补差 / 清空重画</b>。</li>
   </ol>
 
   <figure class="fig">
@@ -1596,7 +1532,7 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
       <rect x="30" y="258" width="620" height="26" rx="8" fill="#e9f6ee" stroke="#86d3a1" stroke-width="1.6"/>
       <text x="340" y="275" text-anchor="middle" class="t" fill="#15803d">95 分位信噪比不足 → 整块作废重画;整孔被盖 ≥70% → 连通域兜底闭合;外扩 8px + 填 bg_fill 入库</text>
     </svg>
-    <figcaption>双阈值差分抠取(阶段 3.3):FLUX 重绘前后两张图逐像素相减——背景刀纹互相抵消,被画过的像素亮起来;高阈值 <b>3.5σ</b> 圈出"肯定是"的核心种子,低阈值 <b>1.8σ</b> 从种子向连通的浅边缘生长——边缘浅笔触不丢、孤立噪点不收;抠出后外扩 8px、掩码外填 bg_fill,入库 synth_cache/。</figcaption>
+    <figcaption>双阈值差分抠取(阶段 2):FLUX 重绘前后两张图逐像素相减——背景纹理互相抵消,被画过的像素亮起来;高阈值 <b>3.5σ</b> 圈出"肯定是"的核心种子,低阈值 <b>1.8σ</b> 从种子向连通的浅边缘生长——边缘浅笔触不丢、孤立噪点不收;抠出后外扩 8px、掩码外中值去背景,入库 patches/。</figcaption>
   </figure>
 
   <div class="co plain">
@@ -1605,57 +1541,57 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
   </div>
 
   <figure class="fig">
-    <svg viewBox="0 0 680 320" role="img" aria-label="配额算例图:公式N等于max保底与按地盘摊两项,输入为底图60张、加工面约1.8个满块、绑2种缺陷,算得每点位60张,五个点位共约300张;右下角说明保底量级与补差额规则">
-      <text x="340" y="22" text-anchor="middle" class="tb">3.3 该画多少?—— 配额公式走一个算例</text>
+    <svg viewBox="0 0 680 320" role="img" aria-label="合成配额算例图:公式Q等于clip把各区每轮贴图次数E除以缺陷种数D求和再除以复用5,夹在60到600;输入加工面三个点位E六百D二,算得一百八十张">
+      <text x="340" y="22" text-anchor="middle" class="tb">该画多少?—— 合成配额 Q_synth 走一个算例</text>
 
       <rect x="25" y="38" width="630" height="48" rx="8" fill="#eaf2fe" stroke="#93b4f5" stroke-width="1.6"/>
-      <text x="340" y="60" text-anchor="middle" class="tb">N = max( m_p^eff , ⌈ m_p^eff × C ÷ B ⌉ )</text>
-      <text x="340" y="78" text-anchor="middle" class="tm">m_p^eff = 该点位有效底图数(上限 200) · C = 分区面积 ÷ 512²(满块数) · B = 绑定的缺陷种数</text>
+      <text x="340" y="60" text-anchor="middle" class="tb">Q_synth = clip( ⌈ Σ_p ( E_pz ÷ D_pz ) ÷ 5 ⌉ , 60 , 600 )</text>
+      <text x="340" y="78" text-anchor="middle" class="tm">E_pz = 各点位该区单轮贴图次数(注水预算解出,见 7.1) · D_pz = 该区缺陷种数 · ÷5 = 单张合成图旋转缩放翻转可当 5 次用</text>
 
       <rect x="25" y="100" width="195" height="64" rx="9" fill="#fbfaf6" stroke="#d8d2c0" stroke-width="1.5"/>
-      <text x="40" y="122" class="t"><b>① 底图量</b></text>
-      <text x="40" y="142" class="tm">该点位 60 张训练底图</text>
-      <text x="40" y="158" class="tm" fill="#1e40af">m_p^eff = 60</text>
+      <text x="40" y="122" class="t"><b>① 单轮贴多少</b></text>
+      <text x="40" y="142" class="tm">「加工面」在 3 个点位,</text>
+      <text x="40" y="158" class="tm" fill="#1e40af">每点位 E = 600 次</text>
 
       <rect x="240" y="100" width="195" height="64" rx="9" fill="#fbfaf6" stroke="#d8d2c0" stroke-width="1.5"/>
-      <text x="255" y="122" class="t"><b>② 地盘大小</b></text>
-      <text x="255" y="142" class="tm">加工面 ≈ 800×600 px</text>
-      <text x="255" y="158" class="tm" fill="#1e40af">≈ 1.8 个满块 → C = 1.8</text>
+      <text x="255" y="122" class="t"><b>② 几种缺陷分摊</b></text>
+      <text x="255" y="142" class="tm">绑划痕、砂眼 2 种</text>
+      <text x="255" y="158" class="tm" fill="#1e40af">每点位 600 ÷ 2 = 300</text>
 
       <rect x="455" y="100" width="200" height="64" rx="9" fill="#fbfaf6" stroke="#d8d2c0" stroke-width="1.5"/>
-      <text x="470" y="122" class="t"><b>③ 缺陷种数</b></text>
-      <text x="470" y="142" class="tm">绑划痕、砂眼 2 种</text>
-      <text x="470" y="158" class="tm" fill="#1e40af">B = 2</text>
+      <text x="470" y="122" class="t"><b>③ 跨点位汇总÷5</b></text>
+      <text x="470" y="142" class="tm">3 个点位 Σ = 900 次</text>
+      <text x="470" y="158" class="tm" fill="#1e40af">900 ÷ 5 = 180 → 复用折算</text>
 
       <rect x="25" y="178" width="630" height="32" rx="8" fill="#fdf0e7" stroke="#e7b58a" stroke-width="1.6"/>
-      <text x="340" y="198" text-anchor="middle" class="t">N = max( 60 , ⌈ 60 × 1.8 ÷ 2 ⌉ ) = max(60, 54) = <b>60 张 / 每点位</b></text>
+      <text x="340" y="198" text-anchor="middle" class="t">Q_synth = clip( ⌈180⌉ , 60 , 600 ) = <b>180 张</b>(划痕与砂眼各按点位权重分回重绘)</text>
 
       <rect x="25" y="224" width="280" height="84" rx="9" fill="#e9f6ee" stroke="#86d3a1" stroke-width="1.8"/>
-      <text x="42" y="248" class="tb" fill="#15803d">总量</text>
-      <text x="42" y="270" class="t">5 个点位都有「加工面」</text>
-      <text x="42" y="292" class="t">→ 划痕总配额 ≈ 5 × 60 = 300 张</text>
+      <text x="42" y="248" class="tb" fill="#15803d">下限 60 · 上限 600</text>
+      <text x="42" y="270" class="t">小检测区哪怕只在 1 个点位出现,</text>
+      <text x="42" y="292" class="t">也保底合成 60 张;大区封顶防膨胀</text>
 
       <rect x="320" y="224" width="335" height="84" rx="9" fill="#fbfaf6" stroke="#d8d2c0" stroke-width="1.5"/>
       <text x="337" y="248" class="tb">直觉与补足</text>
-      <text x="337" y="268" class="tm">保底 = 每张有效底图一张,与真实素材同量级;</text>
-      <text x="337" y="284" class="tm">地盘越大、种数越少 → 配额越高(几种均摊地盘);</text>
-      <text x="337" y="300" class="tm">标注变 → 重训+清缓存;平时只补差额,最多 3 轮</text>
+      <text x="337" y="268" class="tm">要贴多少就画多少,与阶段 3 同一本账;</text>
+      <text x="337" y="284" class="tm">真实 + 合成同池平权、无放回发牌;</text>
+      <text x="337" y="300" class="tm">指纹没变只补差额,LoRA/分区变了清空重画</text>
     </svg>
-    <figcaption>配额算例:每个 (点位, 分区, 缺陷) 组合各算一份——保底项与真实素材同量级(每张有效底图一张),再按"地盘满块数 ÷ 缺陷种数"放大;总量对各点位求和。平时逐组合清点 synth_cache 现有量、只补差额;质检作废的不计数,最多补 3 轮。</figcaption>
+    <figcaption>合成配额算例:每个 {检测区}/{缺陷} 一算——把各点位该区单轮贴图次数 E 均分给 D 种缺陷、跨点位求和,再按"1 张合成图单轮可当 5 次用"折算,整体夹在 [60, 600]:小区保底、大区封顶。配额按各点位权重分回,只在对应点位的底图上重绘。</figcaption>
   </figure>
   <div class="co why">
     <span class="tag">🎯 为什么把生成器搬进 train?</span>
-    <p>① <b>零配置</b>:配额、规格、模板全部由本产品的真实缺陷自动推导,不用人传 --count、不用手写绑定;② <b>口径一致</b>:配额公式与分卷公式同一套数学(连 seed 都相同),"产多少"与"用多少"永远对得上账;③ <b>指纹联动</b>:LoRA 权重、合成缓存、真实小图都挂标注指纹——新标几张缺陷照片,下次启动只有受影响的部分自动重建,其余全部秒级复用。</p>
+    <p>① <b>零配置</b>:配额、规格、模板全部由本产品的真实缺陷与统一预算自动推导,不用人传 --count、不用手写绑定;② <b>口径一致</b>:合成配额直接由阶段 3 贴图需求同源导出,"产多少"与"用多少"永远对得上账;③ <b>指纹联动</b>(prep_plan):每个 (检测区,缺陷) 组合独立记指纹——新标几张缺陷照片,下次启动只有受影响的组合自动重建,其余秒级复用,合成还能"留旧补差"。</p>
   </div>
 </section>
 
 <!-- ================= 第 8 章 ================= -->
 <section id="synth">
-  <div class="chap"><span class="chapno">第 8 章</span><h2>事件线 5.2 · 在线造题:贴缺陷的八步流水线</h2></div>
-  <div class="chapref">对应 README 事件线 5.2 + dataset.py/_paste 源码 + §四「缺陷轮廓外扩与特殊加工流程」</div>
+  <div class="chap"><span class="chapno">第 8 章</span><h2>阶段 3 · 在线造题:贴缺陷的八步流水线</h2></div>
+  <div class="chapref">对应 README 宏观大流程 4 + dataset.py 源码</div>
 
-  <h3>8.1 造多少题?—— 固定缺陷池,按种子"确定性再生"</h3>
-  <p>新版题池是<b>"每块·每区·每种缺陷"的均衡配额池</b>:对每个图块 t、块内每个分区 z、该区绑定的每种缺陷 d 生成一个"贴题任务",任务权重 = 块内可用分区面积 ÷ 512²(<b>占满整块贴 1 次,占半块 0.5 次</b>)——大平面与小方孔的"单位面积·单种缺陷密度"严格相等,多种缺陷互不稀释;连该缺陷最小规格 min 都放不下的<b>残角块</b>直接剔除。然后按<b>正负 1:1 精确配额</b>(最大余数法取整)分配样本数并 1:1 交错编排,每分片内部严格 50:50。所有题目仍<b>不落盘</b>:由定死的种子确定性再生——同一下标每次合成出完全相同的缺陷。</p>
+  <h3>8.1 造多少题?—— 干净块池 + 注水配额 + 无放回牌靴</h3>
+  <p>题池的地基是<b>干净块清单</b>:每张底图按步长 384 打网格,<b>整块跳过</b>沾到任何标注(含外扩 <span class="kn">4px</span>)或不含有效检测区的块(骑缝小连通域自动补块,补块同样须干净)。在这个清单上,按 7.1 的注水倍数为每块定出场次数,生成<b>正负严格 1:1</b>(一半纯净、一半贴缺陷)并交错的样本序列;超大区按分片跨轮轮转。贴题缺陷从哪张素材上裁?由<b>无放回洗牌牌靴</b>发牌:每个 (检测区,缺陷) 组合的"真实 + 合成"混合池配一只独立牌靴,构建时跨全部分片预分配好<b>全局连续的发牌序号</b>——<b>每张小图都被发过一轮,才重新洗牌</b>,零跳号、零跨片撞车、素材绝无闲置。所有题目仍<b>不落盘</b>:由定死的种子确定性再生。</p>
 
   <figure class="fig">
     <svg viewBox="0 0 680 250" role="img" aria-label="正负一比一的道理:一半图块贴缺陷教模型认缺陷,一半纯净图块教模型认干净;只教一边都会翻车">
@@ -1690,26 +1626,26 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
     <span class="tag">💡 大白话:认熊猫,还得认"不是熊猫"</span>
     <p>教小孩认<b>熊猫</b>,不能只给他看熊猫照片——看啥都觉得像熊猫;还得带他看<b>猫、狗、兔子</b>,他才知道"这些不是"。训练同理:一半的题故意不贴缺陷、答案全是"正常",就是天天默写"干净金属长啥样",把误报压住;另一半贴缺陷的题负责"见缺陷就报",把漏报压住。</p>
   </div>
-  <p><b>素材从哪抽?</b>双源合一内存池(<code class="inl">assets.py·AssetLib</code>):启动时把 <b>LoRA 合成切片</b>(<code class="inl">synth_cache/{缺陷}/{点位}__{分区}/</code> 对口目录优先,不足再取该缺陷全部)与<b>真实裁剪切片</b>(<code class="inl">real_patches/{缺陷}/</code>)一次性载入内存——真实与合成同池混用,谁也不偏食。<b>按可达抽签</b>:抽题先定目标面积(中位数锚定对数均匀),再优先挑"放大缩小 ≤2 倍就能到目标"的切片,避免抽到过小素材硬放大失真。规格([min, max, med] 面积区间、对比度 [diff_lo, diff_hi]、贴边率 b_prob)全部来自阶段 2.4 的<b>实测 auto_zones</b>(第 2 章),不存外部配置——新标照片下次启动自动刷新。全部素材载入时做<b>通用物理预处理</b>:掩码外归背景中值、贴边垫 1px(见 8.3),<b>100% 保留原生极性与边缘过渡</b>。</p>
+  <p><b>素材从哪抽?</b>单一内存池(<code class="inl">assets.py·AssetLib</code>):启动时把 <code class="inl">patches/{检测区}/{缺陷}/</code> 下的<b>真实 real_* 与合成 synth_*</b> 一次性载入内存、完全平权混洗,<b>按牌靴的序号发牌</b>(不挑肥拣瘦)。缩放先按实测规格定目标面积(中位数锚定对数均匀),再在"该素材合法缩放区间 ∩ 规格区间"内围绕中位数采样;规格([min, max, med] 面积、[diff_lo, diff_med, diff_hi] 对比度、<b>极性 polarity</b>)全部来自<b>实测 auto_zones</b>(第 2 章),不存外部配置——新标照片下次启动自动刷新。素材载入时做<b>通用物理预处理</b>:掩码外归背景中值、贴边垫 1px、局部对比度门限收紧掩码虚边(见 8.3),<b>100% 保留原生极性与边缘过渡</b>。</p>
 
   <figure class="fig">
     <svg viewBox="0 0 680 260" role="img" aria-label="双源同池抽素材与常驻内存示意:合成切片与真实切片进同一内存池,按可达等概率抽取,启动时一次性预处理常驻内存">
       <text x="170" y="26" text-anchor="middle" class="tb">① 抽素材 = 双源同池(合成 + 真实)</text>
       <rect x="28" y="44" width="138" height="64" rx="8" fill="#fdf0e7" stroke="#15803d" stroke-width="2.2"/>
-      <text x="97" y="60" text-anchor="middle" class="tb">synth_cache/ 合成切片</text>
-      <text x="97" y="74" text-anchor="middle" class="tm">(FLUX 现量产,对口 {点位}__{分区} 优先)</text>
+      <text x="97" y="60" text-anchor="middle" class="tb">synth_* 合成小图</text>
+      <text x="97" y="74" text-anchor="middle" class="tm">(LoRA 在本产品底图上画)</text>
       <path d="M46,92 C52,89 58,93 59,99 C60,106 54,110 48,110 C42,110 38,105 39,99 C40,94 42,92 46,92 Z" class="defect"/>
       <circle cx="95" cy="88" r="17" fill="none" stroke="#15803d" stroke-width="1.6" stroke-dasharray="4 3"/>
       <path d="M95,79 C102,77 108,82 108,89 C108,97 101,101 95,101 C89,101 85,96 86,90 C87,85 90,81 95,79 Z" class="defect"/>
       <path d="M133,93 C138,91 143,95 143,100 C143,106 137,109 132,108 C127,107 125,102 127,98 C128,95 130,94 133,93 Z" class="defect"/>
       <rect x="180" y="44" width="138" height="64" rx="8" fill="#fbfaf6" stroke="#d8d2c0" stroke-width="1.6"/>
-      <text x="249" y="60" text-anchor="middle" class="tb">real_patches/ 真实切片</text>
+      <text x="249" y="60" text-anchor="middle" class="tb">real_* 真实小图</text>
       <text x="249" y="74" text-anchor="middle" class="tm">(原图零失真抠取)</text>
       <ellipse cx="212" cy="90" rx="15" ry="4.5" class="defect"/>
       <ellipse cx="252" cy="93" rx="12" ry="4" class="defect"/>
       <ellipse cx="292" cy="88" rx="14" ry="4" class="defect"/>
-      <text x="170" y="128" text-anchor="middle" class="t" fill="#15803d">先定目标面积 → 优先挑"缩放 ≤2 倍可达"的切片</text>
-      <text x="170" y="146" text-anchor="middle" class="t" fill="#15803d">可达池内等概率抽一张(合成真实一视同仁)</text>
+      <text x="170" y="128" text-anchor="middle" class="t" fill="#15803d">同一只牌靴按序号发牌(真实合成一视同仁)</text>
+      <text x="170" y="146" text-anchor="middle" class="t" fill="#15803d">发完一轮才重新洗牌——零闲置</text>
       <rect x="45" y="158" width="250" height="56" rx="8" fill="#eaf2fe" stroke="#93b4f5" stroke-width="1.6"/>
       <path d="M78,180 C86,177 93,182 93,190 C93,199 86,203 79,203 C72,203 68,197 69,190 C70,185 73,182 78,180 Z" class="defect"/>
       <path d="M81,187 C86,185 90,189 90,194 C90,199 86,201 82,201 C78,201 76,198 77,194 C77,191 79,188 81,187 Z" class="defectd"/>
@@ -1740,12 +1676,12 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
       <text x="511" y="212" text-anchor="middle" class="tm">出题时直接抓取,不再碰磁盘</text>
       <text x="511" y="228" text-anchor="middle" class="tm" fill="#15803d">LRU 永不淘汰——预处理只做这一次,倒掉就亏了</text>
     </svg>
-    <figcaption>双源同池抽素材:LoRA 合成切片(synth_cache,对口 {点位}__{分区} 优先)与真实切片(real_patches)进同一个内存池;抽题先按实测规格定目标面积,再优先挑"缩放 ≤2 倍可达"的切片、池内等概率抽一张(合成与真实一视同仁);素材库启动时一次性预处理(二值化/抹背景/垫边)并常驻内存,出题时直接取用。</figcaption>
+    <figcaption>单一素材池:patches/{检测区}/{缺陷}/ 下的合成小图(synth_*,LoRA 在本产品底图上画)与真实小图(real_*,原图零失真抠取)进同一个内存池;每 (检测区,缺陷) 一只无放回牌靴,按全局连续序号发牌——真实与合成一视同仁,发完一轮才重新洗牌;素材库启动时一次性预处理(二值化/抹背景/垫边/收紧虚边)并常驻内存,出题时直接取用。</figcaption>
   </figure>
 
   <div class="co plain">
     <span class="tag">💡 大白话:双仓库 + 食堂备菜</span>
-    <p><b>双仓库</b>:合成切片管"数量与多样性"(想要多少产多少),真实切片管"原汁原味"(从现场照片零失真剪下来的形态底气)——两仓库进同一货架,按"谁正好合身"取用,不搞目录特权。<b>食堂备菜</b>:开工前把所有菜洗好、切好、装盘(启动时一次性预处理),出餐时直接抓——不为每一张订单现跑一趟菜场(重新读盘+处理)。</p>
+    <p><b>双仓库</b>:合成小图管"数量与多样性"(想要多少产多少),真实小图管"原汁原味"(从现场照片零失真剪下来的形态底气)——两仓库进同一货架、洗进同一副牌,按牌靴序号轮着用,不搞目录特权。<b>食堂备菜</b>:开工前把所有菜洗好、切好、装盘(启动时一次性预处理),出餐时直接抓——不为每一张订单现跑一趟菜场(重新读盘+处理)。</p>
   </div>
 
   <figure class="fig">
@@ -1762,25 +1698,25 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
       <path d="M135,95 C143,92 151,98 151,107 C151,117 143,121 135,121 C127,121 122,114 124,106 C125,101 130,97 135,95 Z" class="defect"/>
       <path d="M138,102 C143,100 147,104 147,109 C147,114 143,116 139,116 C135,116 133,112 134,108 C135,105 136,103 138,102 Z" class="defectd"/>
       <text x="135" y="78" text-anchor="middle" class="tm" fill="#15803d">随机锚点 ✓</text>
-      <ellipse cx="168" cy="160" rx="22" ry="13" fill="#eab308" opacity=".55"/>
-      <text x="168" y="188" text-anchor="middle" class="tm" fill="#b45309">真缺陷标注区(避开)</text>
-      <text x="125" y="220" text-anchor="middle" class="tm" fill="#1e40af">加工面∩本块 ≈ 8000px,装得下 → 均衡任务 ✓</text>
+      <ellipse cx="168" cy="160" rx="22" ry="13" fill="none" stroke="#06b6d4" stroke-width="1.8" stroke-dasharray="4 3"/>
+      <text x="168" y="188" text-anchor="middle" class="tm" fill="#0e7490">区边缘:对准边界线(50%)</text>
+      <text x="125" y="220" text-anchor="middle" class="tm" fill="#1e40af">加工面 ∩ 本块装得下 → 派贴题任务 ✓</text>
 
       <rect x="250" y="40" width="415" height="40" rx="8" fill="#eaf2fe" stroke="#cddbfc"/>
-      <text x="262" y="65" class="t">1. 数一数:本块与每个「绑了资产的分区」的交集多大</text>
+      <text x="262" y="65" class="t">1. 数一数:本块内含哪些"有效检测区"</text>
       <rect x="250" y="90" width="415" height="40" rx="8" fill="#eaf2fe" stroke="#cddbfc"/>
-      <text x="262" y="115" class="t">2. 连 min 规格都放不下的残角块剔除(绿条这种窄边)</text>
+      <text x="262" y="115" class="t">2. 沾到任何标注的块,在清单阶段就已被整块跳过</text>
       <rect x="250" y="140" width="415" height="40" rx="8" fill="#eaf2fe" stroke="#cddbfc"/>
-      <text x="262" y="165" class="t">3. 均衡池按面积配额派任务(每区每种缺陷各贴各的)</text>
+      <text x="262" y="165" class="t">3. 牌靴按 (检测区, 缺陷) 无放回发牌</text>
     <rect x="250" y="190" width="415" height="40" rx="8" fill="#e9f6ee" stroke="#c8e8d3"/>
-    <text x="262" y="215" class="t">4. 距离变换智能落锚(实测贴边率分层:区内近边/开阔地/孔心),贴 1 个缺陷</text>
+    <text x="262" y="215" class="t">4. 落锚五五分:50% 区内对准质心 / 50% 区边缘对准边界线</text>
     </svg>
-    <figcaption>选分区与落点避让:均衡池按"每块·每区·每种缺陷"派任务,块内可用分区面积装得下该缺陷最小规格 min 才成题(左侧绿条那种窄边,连 min 都放不下直接剔除);落锚点用距离变换智能分层(区内近边/开阔地/孔心附近),锚点严格在区内、区内至少 10px、入区比例按落点分档(贴边 ≥35%、内部 ≥70%)——合成缺陷既学得到"贴边长"的样子,又不会尖角擦边越界画进相邻分区。</figcaption>
+    <figcaption>选区与落位:干净块内先数含哪些有效检测区(沾标注的块在清单阶段就被整块跳过,无需落点再避让);每 (检测区,缺陷) 由无放回牌靴发牌;落锚<b>五五分</b>——50% <b>区边缘模式</b>把缺陷掩码的随机一点对准检测区边界线(越出部分按区截断,天然覆盖"轻微擦边到跨边大半"的真实形态,入区 ≥15% 即可),50% <b>区内模式</b>对准缺陷质心、保证整颗完整落在区内(入区 ≥70%)。</figcaption>
   </figure>
 
   <div class="co plain">
     <span class="tag">💡 大白话:停哪儿有讲究(距离变换智能放置)</span>
-    <p>往分区里贴缺陷像倒车入位,但<b>车位不是乱挑的</b>——程序先算一张"每个点到分区边界有多远"的<b>距离变换图</b>,按缺陷个头分层停:① <b>正常个头</b>(分区内最宽处容得下缺陷):按<b>实测贴边率</b>(0.30~0.65)概率停在<b>区内近边带</b>(离边界 ≤4px~0.85 倍等效半径)——故意造"贴边甚至跨边"的样本,只要求 <span class="kn">≥35%</span> 身子在区内;其余概率停<b>区内开阔处</b>,要求 <span class="kn">≥70%</span> 在区内;② <b>缺陷快有整个孔那么大</b>(如整孔封铸膜,区内最窄处容不下):对准<b>孔心附近</b>(距离 ≥ 一半最大深度)一次盖住整孔。三条硬规矩:<b>锚点质心必须严格在检测区内</b>(绝不放区外深槽)、<b>区内正样本至少 10px</b>、<b>按落点远近分档控入区比例</b>(贴边 ≥35% / 内部 ≥70%,杜绝尖角擦边的畸形样本);落点无需绕开底图标注——底图本身已在 8.8 修补干净。</p>
+    <p>往有效检测区里贴缺陷,落位<b>固定五五分</b>:<b>50% 区边缘模式</b>——把缺陷掩码里随机一点对准检测区边界线(距边 ≤2.5px),越出部分按区截断,天然造出"轻微擦边到跨边大半"的真实贴边形态;<b>50% 区内模式</b>——在离边足够远的内部(距离 ≥ min(半深, 0.75 倍等效半径))对准缺陷<b>质心</b>,保证整颗完整落在区内。硬规矩:区内正样本至少 <span class="kn">8px</span>;边缘落位只需 <span class="kn">≥15%</span> 身子在区内、内部落位需 <span class="kn">≥70%</span>。因底图块本身就是干净跳选出来的,落点<b>无需再绕开任何标注</b>。</p>
   </div>
 
   <div class="co plain">
@@ -1793,31 +1729,31 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
     <svg viewBox="0 0 680 260" role="img" aria-label="贴缺陷八步流水线:切块、抽素材去背景、对数缩放、翻转亮度旋转、随机锚点、泊松贴图、截断复检、打标签">
       <rect x="18" y="30" width="150" height="56" rx="9" fill="#eaf2fe" stroke="#93b4f5" stroke-width="2"/>
       <text x="93" y="52" text-anchor="middle" class="tb">① 切块 512×512</text>
-      <text x="93" y="70" text-anchor="middle" class="tm">网格裁(训练随机抖动)</text>
+      <text x="93" y="70" text-anchor="middle" class="tm">原图直裁(跳脏块+抖动)</text>
 
       <rect x="188" y="30" width="150" height="56" rx="9" fill="#eaf2fe" stroke="#93b4f5" stroke-width="2"/>
-      <text x="263" y="52" text-anchor="middle" class="tb">② 抽素材去背景</text>
-      <text x="263" y="70" text-anchor="middle" class="tm">~mask 抹中值 + 垫 1px</text>
+      <text x="263" y="52" text-anchor="middle" class="tb">② 牌靴发牌</text>
+      <text x="263" y="70" text-anchor="middle" class="tm">真实+合成 平权无放回</text>
 
       <rect x="358" y="30" width="150" height="56" rx="9" fill="#eaf2fe" stroke="#93b4f5" stroke-width="2"/>
       <text x="433" y="52" text-anchor="middle" class="tb">③ 中位锚定抽尺寸</text>
-      <text x="433" y="70" text-anchor="middle" class="tm">50% 抽 [min, med] 实测段</text>
+      <text x="433" y="70" text-anchor="middle" class="tm">合法缩放区间内采样</text>
 
       <rect x="528" y="30" width="140" height="56" rx="9" fill="#eaf2fe" stroke="#93b4f5" stroke-width="2"/>
-      <text x="598" y="52" text-anchor="middle" class="tb">④ 翻转/亮度/旋转</text>
-      <text x="598" y="70" text-anchor="middle" class="tm">50%翻转→亮度→360°</text>
+      <text x="598" y="52" text-anchor="middle" class="tb">④ 翻转/极性/旋转</text>
+      <text x="598" y="70" text-anchor="middle" class="tm">50%翻转→360°</text>
 
       <rect x="18" y="120" width="150" height="56" rx="9" fill="#fdf0e7" stroke="#e7b58a" stroke-width="2"/>
-      <text x="93" y="142" text-anchor="middle" class="tb">⑤ 随机锚点放置</text>
-      <text x="93" y="160" text-anchor="middle" class="tm">分区内落点,避真缺陷</text>
+      <text x="93" y="142" text-anchor="middle" class="tb">⑤ 五五分落位</text>
+      <text x="93" y="160" text-anchor="middle" class="tm">区内质心 / 区边缘对边</text>
 
       <rect x="188" y="120" width="150" height="56" rx="9" fill="#fdf0e7" stroke="#e7b58a" stroke-width="2"/>
-      <text x="263" y="142" text-anchor="middle" class="tb">⑥ 残差泊松融合</text>
-      <text x="263" y="160" text-anchor="middle" class="tm">0.5x 居中求解+定向对比度</text>
+      <text x="263" y="142" text-anchor="middle" class="tb">⑥ 零光晕泊松</text>
+      <text x="263" y="160" text-anchor="middle" class="tm">50/50 残差 + 极性定向</text>
 
       <rect x="358" y="120" width="150" height="56" rx="9" fill="#fdf0e7" stroke="#e7b58a" stroke-width="2"/>
       <text x="433" y="142" text-anchor="middle" class="tb">⑦ 落地复检</text>
-      <text x="433" y="160" text-anchor="middle" class="tm">规格(允许跨界)+可见性</text>
+      <text x="433" y="160" text-anchor="middle" class="tm">入区 15%/70% + 可见性</text>
 
       <rect x="528" y="120" width="140" height="56" rx="9" fill="#e9f6ee" stroke="#86d3a1" stroke-width="2"/>
       <text x="598" y="142" text-anchor="middle" class="tb">⑧ 打 GT 标签</text>
@@ -1831,13 +1767,13 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
       <path d="M 338,148 L 356,148" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
       <path d="M 508,148 L 526,148" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
 
-      <text x="340" y="215" text-anchor="middle" class="tm">任何一步失败(缩放够不着/落地复检不过/泊松失败/不可见)→ 重抽再试,上限 10 次(PLACE_TRIES)</text>
-      <text x="340" y="233" text-anchor="middle" class="tm">10 次都失败 → 该块降级为纯净块(不出缺陷题,答"全正常")</text>
+      <text x="340" y="215" text-anchor="middle" class="tm">任何一步失败(缩放够不着/落位不成/泊松失败/不可见)→ 重抽再试,上限 12 次(PLACE_TRIES)</text>
+      <text x="340" y="233" text-anchor="middle" class="tm">12 次都失败 → 该区这轮不贴(此块当纯净块用)</text>
     </svg>
-    <figcaption>八步流水线:抽素材 → 中位锚定缩放 → 变换(含对比度定向合成)→ 距离变换智能放置 → 残差泊松 → 落地复检 → 打标签;失败重抽(上限 10 次),弹尽粮绝就降级为纯净块,绝不硬凑。</figcaption>
+    <figcaption>八步流水线:原图干净切块 → 牌靴无放回发牌 → 合法区间内中位锚定缩放 → 变换(极性保持)→ 五五分落位 → 零光晕泊松 → 入区与可见性复检 → 三值标签;失败重试(上限 12 次),弹尽粮绝该区不贴,绝不硬凑。</figcaption>
   </figure>
 
-  <p><b>对比度定向合成</b>(新版第④步的一部分):贴之前先按该缺陷<b>实测对比度区间</b> [diff_lo, diff_hi] 均匀抽一个目标幅度(diff_lo/diff_hi 来自真实缺陷 p10×0.8 / p90×1.15 的实测,夹逼在 16~42 与 55~195);素材<b>保持原生极性与内部明暗结构</b>(暗坑还是暗坑、亮斑还是亮斑,绝不整体取反),泊松解出残差后按标签区实测 p75 对比度<b>定向缩放到目标幅度(限幅 <span class="kn">0.5~3.0 倍</span>)</b>;最后过一道<b>深孔门控</b>——目标位置越暗,正向(提亮)残差被压得越狠(按底图亮度线性折减),杜绝在深孔黑背景上画出突兀亮斑。<b>这套参数不存盘、不预处理</b>——由阶段 2.4 从训练池真实缺陷实测而来(存 auto_zones.json),新加缺陷照片后下次重跑自动刷新。</p>
+  <p><b>对比度定向合成</b>(第④⑥步的一部分):先按该组合的实测对比度 [diff_lo, diff_med, diff_hi] <b>中位锚定</b>抽一个目标幅度;素材<b>保持原生极性与内部明暗结构</b>(实测极性为"偏暗"的绝不画成亮斑——泊松残差按 polarity 定向、必要时整体反号);残差幅度按标签区 <b>p50+p75 各半</b>的实测幅度<b>定向缩放到目标(限幅 <span class="kn">0.5~6.0 倍</span>)</b>;最后过一道<b>深孔门控</b>——目标位置越暗,正向(提亮)残差被压得越狠,杜绝在深色背景上画出突兀亮斑。<b>这套参数不存盘、不预处理</b>——全部由实测 auto_zones 而来,新加缺陷照片后下次重跑自动刷新。</p>
 
   <div class="co plain">
     <span class="tag">💡 大白话:掩码的"半份身份"(m_float)</span>
@@ -1916,8 +1852,8 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
     <figcaption>覆盖度(m_float)的由来:旋转用双线性插值——新像素的值由原图邻近像素加权平均,落在缺陷边缘的新像素邻居里有 1 有 0,平均出 0~1 的小数,即"被缺陷盖了几成"。同一份 m_float 按门槛取用:&gt;0.4 的格子(橙虚线圈)组成克隆用掩码送泊松;&gt;0.25 再多包一圈淡边(绿虚线格)作为 GT 标签;原值柔化后当柔边回写的混合权重。</figcaption>
   </figure>
 
-  <h3>8.3 第②步:内存去背景与贴边垫 1px(assets.py)</h3>
-  <p>素材小图读进内存时(磁盘原文件不动):掩码外(~mask)全部抹平为<b>自身灰度中位数</b>;若掩码贴着图边,自动向外垫 <span class="kn">1px</span> 背景色。</p>
+  <h3>8.3 第②步:内存去背景、垫边与收紧虚边(assets.py)</h3>
+  <p>素材小图读进内存时(磁盘原文件不动)做三件小事:掩码外(~mask)全部抹平为<b>自身灰度中位数</b>;若掩码贴着图边,自动向外垫 <span class="kn">1px</span> 背景色;再按局部对比度门限<b>收紧掩码外缘的虚边</b>——把半透明的边缘像素剔出掩码,确保标签紧贴核心异常像素。</p>
 
   <figure class="fig">
     <svg viewBox="0 0 680 260" role="img" aria-label="素材去背景三格图:磁盘原图外圈带异源纹理,读进内存后掩码外全部抹平为灰度中位数,掩码贴边时自动外垫1px背景色">
@@ -2006,7 +1942,7 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
 
   <h3>8.5 第⑥步:泊松贴图的两件法宝</h3>
   <p><b>法宝一:带上下文的画布。</b>贴缺陷不是贴在孤零零的 512 块里,而是先从整图裁出「512 块 + 四周各多裁一圈真实底图」的大画布,把<b>完整素材</b>泊松贴上去,再裁回 512 块——缺陷可以横跨块边(推理时缺陷同样会被块边切开),也不会因为素材被块边截断而融合发虚。越出整图的部分用镜像补齐。</p>
-  <p><b>法宝二:0.5x 居中残差泊松</b>(新版重写),五招:① 求解域内<b>区外背景先换成区内中值</b>(防深孔悬崖污染求解);② 源/目标<b>增益减半、居中灰度 128</b> 求解后<b> ×2 还原残差</b>(防 OpenCV uint8 求解器在高光金属 235~255 与暗部的截断失真);③ 残差 = <span class="kn">65%</span> 泊松残差 + <span class="kn">35%</span> 源残差(保住素材的自然斜坡);④ 按<b>目标对比度定向缩放</b>(0.5~3.0 倍限幅);⑤ <b>深孔门控 + 检测区硬截断</b>:目标位置越暗、正向提亮残差越被压制(防深孔里冒亮斑),融合权重最后严格乘检测区掩码——<b>区外一个像素都不落笔</b>:</p>
+  <p><b>法宝二:0.5x 居中零光晕泊松</b>,五招:① 求解域内<b>区外背景先换成区内中值</b>(防深色悬崖污染求解);② 源/目标<b>增益减半、居中灰度 128</b> 求解后<b> ×2 还原残差</b>(防 OpenCV uint8 求解器在高光金属 235~255 与暗部的截断失真);③ 残差 = <span class="kn">50%</span> 泊松残差 + <span class="kn">50%</span> 源残差(环境光融合与素材自然斜坡各占一半);④ 按 <b>p50+p75 各半</b>的实测幅度<b>定向缩放到目标对比度(限幅 0.5~6.0 倍)</b>,并按实测<b>极性</b>保持明暗方向;⑤ <b>零光晕回写 + 深孔门控</b>:落笔严格限制在「缺陷标签 ∩ 有效检测区」内(标签外圈 1px 权重 0.55、≥2px 满幅,label=0 处恒为 0——正常背景一个像素都不改);越出到所有区并集外的部分按 <b>30% 不变 / 40% 半透明 / 30% 完全融合</b>做自然边缘随机化,绝不污染相邻检测区:</p>
 
   <figure class="fig">
     <svg viewBox="0 0 680 265" role="img" aria-label="泊松融合三步:掩码外扩5到7像素送入,OpenCV内部腐蚀4像素,按原掩码柔边回写,标签用低阈值0.25">
@@ -2039,24 +1975,24 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
       <ellipse cx="575" cy="120" rx="26" ry="21" fill="none" stroke="#f59e0b" stroke-width="8" opacity=".4"/>
       <ellipse cx="575" cy="120" rx="26" ry="21" class="defect"/>
       <ellipse cx="575" cy="120" rx="14" ry="11" class="defectd"/>
-      <text x="575" y="88" text-anchor="middle" class="tm" fill="#b45309">alpha 柔边(label 边恒 1)</text>
+      <text x="575" y="88" text-anchor="middle" class="tm" fill="#b45309">label 内落笔 外圈1px 0.55</text>
       <text x="575" y="228" text-anchor="middle" class="tb">③ 残差回写</text>
-      <text x="575" y="246" text-anchor="middle" class="tm">0.65泊松+0.35源残差·区内落笔区外截断</text>
+      <text x="575" y="246" text-anchor="middle" class="tm">50泊松+50源残差·零光晕回写</text>
     </svg>
-    <figcaption>残差泊松三步(三圈同心、整圈等距):① <b>求解域准备</b>——掩码(覆盖度 &gt;0.35,椭圆核)整圈等距外扩 5~7px,且求解域内<b>区外背景先换成区内中值</b>(只是给求解器铺"干净桌布",防深孔悬崖污染);② <b>0.5x 居中求解</b>——源/目标增益减半、居中灰度 128 送 seamlessClone(内部仍会向内腐蚀 4px,红虚线;外扩量恰好护住边缘梯度),解出后 ×2 还原成真实幅度的残差;③ <b>残差回写</b>——残差 = 65% 泊松残差 + 35% 源残差,融合权重 alpha 在外扩域边缘高斯柔化(标签边界处恒为 1,无阶跃),最后<b>严格乘检测区掩码:区外 100% 不落笔</b>——一个缺陷只属于当前分区,黑斑亮斑绝不渗进相邻槽或背景。</figcaption>
+    <figcaption>零光晕泊松三步(三圈同心、整圈等距):① <b>求解域准备</b>——掩码(覆盖度 &gt;0.35,椭圆核)整圈等距外扩 5~7px,且求解域内<b>区外背景先换成区内中值</b>(给求解器铺"干净桌布",防深色悬崖污染);② <b>0.5x 居中求解</b>——源/目标增益减半、居中灰度 128 送 seamlessClone(内部仍会向内腐蚀 4px,红虚线;外扩量恰好护住边缘梯度),解出后 ×2 还原成真实幅度的残差;③ <b>零光晕回写</b>——残差 = 50% 泊松 + 50% 源残差,落笔严格限制在「缺陷标签 ∩ 有效检测区」内:标签外圈 1px 权重 0.55、往内 ≥2px 满幅,<b>label=0 的正常背景一个像素都不被改写</b>;越出到所有区并集外的过渡按 30% 不变 / 40% 半透明 / 30% 完全融合随机化,绝不污染相邻检测区。</figcaption>
   </figure>
 
   <div class="tscroll">
   <table class="tbl">
     <tr><th>关键数字</th><th>含义</th></tr>
-    <tr><td><span class="kn">&gt;0.35</span></td><td>m_float 覆盖度超 0.35 才算"克隆用掩码"(送去解泊松的那份;新版从 0.4 微调)</td></tr>
-    <tr><td><span class="kn">&gt;0.30</span></td><td>GT 标签门限(新版从 0.25 微调)——更低才"低阈值连通",且<b>与检测区相交</b>,跨出检测区的部分不算</td></tr>
+    <tr><td><span class="kn">&gt;0.35</span></td><td>m_float 覆盖度超 0.35 才算"克隆用掩码"(送去解泊松的那份)</td></tr>
+    <tr><td><span class="kn">&gt;0.30</span></td><td>GT 标签门限——且<b>与有效检测区相交</b>,跨出检测区的部分不算</td></tr>
     <tr><td><span class="kn">5~7px</span></td><td>克隆前掩码外扩量(随机抽,<b>椭圆核整圈等距</b>),必须盖过 OpenCV 内部腐蚀的 4px</td></tr>
     <tr><td><span class="kn">0.5x 居中</span></td><td>源/目标增益减半、居中 128 求解再 ×2 还原——防 uint8 求解器在高光金属(235~255)与暗部截断失真</td></tr>
-    <tr><td><span class="kn">65% / 35%</span></td><td>回写残差 = 65% 泊松残差 + 35% 源残差——既有环境光融合,又保素材自然斜坡</td></tr>
-    <tr><td><span class="kn">alpha 柔边</span></td><td>融合权重在外扩域边缘高斯柔化(标签边界恒为 1.0,无阶跃);最终<b>严格乘检测区掩码,区外 100% 不落笔</b>(一个缺陷只属于一个分区)</td></tr>
-    <tr><td><span class="kn">深孔门控</span></td><td>回写前正向(提亮)残差按底图亮度线性折减——位置越暗提亮越少,<b>深孔黑背景上不冒亮斑</b></td></tr>
-    <tr><td><span class="kn">垫边</span></td><td>外扩越出素材边界时,复制最边缘像素垫够宽(条件触发,不是每次都垫)</td></tr>
+    <tr><td><span class="kn">50% / 50%</span></td><td>回写残差 = 50% 泊松残差 + 50% 源残差——环境光融合与素材自然斜坡各占一半</td></tr>
+    <tr><td><span class="kn">零光晕</span></td><td>落笔严格在「缺陷标签 ∩ 有效检测区」内:标签外圈 1px 权重 0.55、≥2px 满幅,<b>label=0 处恒为 0</b>——正常背景纹丝不动</td></tr>
+    <tr><td><span class="kn">越界 30/40/30</span></td><td>贴边缺陷越出到所有区并集外的部分:30% 保持原样 / 40% 半透明过渡 / 30% 完全融合——自然边缘随机化,绝不污染相邻检测区</td></tr>
+    <tr><td><span class="kn">深孔门控</span></td><td>回写前正向(提亮)残差按底图亮度线性折减——位置越暗提亮越少,<b>深色背景上不冒亮斑</b></td></tr>
   </table>
   </div>
   <div class="co warn">
@@ -2071,9 +2007,9 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
 
   <h3>8.6 第⑦步:落地复检与可见性</h3>
   <ul>
-    <li><b>严格区内落笔</b>(新版回调):贴边放置仍会造出"贴边缺陷样本"(锚点在近边带、缺陷主体顶到分区边界),但泊松残差<b>严格裁回检测区内</b>——求解前区外先铺区内中值"桌布"只是给求解器用,回写时融合权重乘检测区掩码,<b>区外一个像素都不画</b>,杜绝跨区把黑斑/亮斑染进相邻的槽或背景区。</li>
-    <li><b>落地规格复检</b>(三道关):① 区内正样本 <span class="kn">≥10px</span>;② <b>按落点分档控入区比例</b>——贴着分区边贴入(区内最近距离 ≤2.5px)允许跨界,只需 <span class="kn">≥35%</span> 面积在区内(正是"贴边缺陷"样本);落在内部的则要求 <span class="kn">≥70%</span> 在区内;③ <b>标签整体面积</b>(含跨界部分,和真实小图"完整轮廓"口径一致)落在 <b>0.70~1.30 倍 [min, max]</b> 实测区间;小孔场景可按<b>整孔覆盖 ≥70%</b> 兜底通过(区内面积虽小,但盖住了整个连通域就算合格)。</li>
-    <li><b>可见性复检</b>(VISIBLE_MIN_DIFF=<span class="kn">8.0</span>,标准加倍):标签区内 |贴后 − 贴前| 的<b>平均灰度差 ≥8,或 75 分位对比度 ≥12(8×1.5)</b>,任一达标即通过(兼顾边缘柔边部分入区的情形);两者都不足 → 作废重抽。<b>看不见的缺陷硬标 1 = 噪声标签</b>,会毒化模型("透明正样本")。</li>
+    <li><b>严格区内落笔</b>:贴边的"区边缘样本"越出目标区的部分按区截断标签;写回像素严格限制在「缺陷标签 ∩ 有效检测区」内——<b>label=0 的正常背景一个像素都不改</b>,更不会染进相邻检测区;只有越出到所有区<b>并集之外</b>的部分才按 30/40/30 做自然融合过渡。</li>
+    <li><b>入区复检</b>(两道关):① 区内正样本 <span class="kn">≥8px</span>;② <b>按落点分档控入区比例</b>——区边缘落位允许跨界,只需 <span class="kn">≥15%</span> 面积在区内(正是"贴边缺陷"样本);区内落位则要求 <span class="kn">≥70%</span> 在区内。</li>
+    <li><b>可见性复检</b>(VISIBLE_MIN_DIFF=<span class="kn">8.0</span>):标签区内 |贴后 − 贴前| 的<b>平均灰度差 ≥8,或 75 分位对比度 ≥12(8×1.5)</b>,任一达标即通过;两者都不足 → 作废重抽。<b>看不见的缺陷硬标 1 = 噪声标签</b>,会毒化模型("透明正样本")。</li>
   </ul>
 
   <figure class="fig">
@@ -2097,18 +2033,16 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
       <text x="260" y="200" text-anchor="middle" class="tm">残差严格裁回检测区内(红虚线=越界部分不画)</text>
       <text x="260" y="216" text-anchor="middle" class="tm" fill="#15803d">标签 = 缺陷 ∩ 检测区,区外刀纹原样 ✓</text>
 
-      <text x="430" y="28" text-anchor="middle" class="tb">③ 落地规格复检</text>
-      <line x1="360" y1="110" x2="500" y2="110" stroke="#9aa2b1" stroke-width="1.5" marker-end="url(#ah1)"/>
-      <rect x="378" y="102" width="88" height="16" rx="4" fill="#f59e0b" opacity=".35"/>
-      <line x1="420" y1="94" x2="420" y2="126" stroke="#15803d" stroke-width="2"/>
-      <text x="420" y="88" text-anchor="middle" class="tm" fill="#15803d">1200 ✓</text>
-      <line x1="488" y1="94" x2="488" y2="126" stroke="#dc2626" stroke-width="2"/>
-      <text x="488" y="88" text-anchor="middle" class="tm" fill="#dc2626">2800 ✗</text>
-      <text x="378" y="134" text-anchor="middle" class="tm">min</text>
-      <text x="466" y="134" text-anchor="middle" class="tm">max</text>
-      <text x="430" y="160" text-anchor="middle" class="tm">整体面积 0.70~1.30 倍实测区间</text>
-      <text x="430" y="176" text-anchor="middle" class="tm">(含跨界);或整孔覆盖 ≥70% 兜底</text>
-      <text x="430" y="202" text-anchor="middle" class="tm" fill="#dc2626">落在 [min, max] 外 → 整题重抽</text>
+      <text x="430" y="28" text-anchor="middle" class="tb">③ 入区复检</text>
+      <rect x="360" y="60" width="140" height="22" rx="5" fill="#86d3a1" opacity=".3" stroke="#15803d"/>
+      <rect x="360" y="60" width="24" height="22" rx="5" fill="#15803d" opacity=".55"/>
+      <text x="468" y="76" text-anchor="middle" class="tm">区边缘:入区 ≥15% + ≥8px</text>
+      <rect x="360" y="104" width="140" height="22" rx="5" fill="#86d3a1" opacity=".3" stroke="#15803d"/>
+      <rect x="360" y="104" width="100" height="22" rx="5" fill="#15803d" opacity=".55"/>
+      <text x="478" y="120" text-anchor="middle" class="tm">区内落位:入区 ≥70%</text>
+      <text x="430" y="156" text-anchor="middle" class="tm">边缘模式允许跨界截断(贴边样本)</text>
+      <text x="430" y="176" text-anchor="middle" class="tm">区内模式保证整颗完整落在区内</text>
+      <text x="430" y="202" text-anchor="middle" class="tm" fill="#dc2626">不达标 → 整题重抽</text>
 
       <text x="600" y="28" text-anchor="middle" class="tb">④ 可见性复检</text>
       <rect x="520" y="48" width="56" height="56" rx="4" class="metal"/>
@@ -2123,12 +2057,12 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
       <text x="600" y="184" text-anchor="middle" class="tm" fill="#dc2626">都不足:"透明"→ 重抽</text>
       <text x="600" y="206" text-anchor="middle" class="tm">硬标 1 = 噪声标签,毒化模型</text>
     </svg>
-    <figcaption>落地复检四格:① 贴边落锚——锚点在区内近边带、缺陷主体顶到检测区边界,求解时区外先铺"区内中值桌布"(仅供泊松求解器使用);② 回写后——残差<b>严格裁回检测区内</b>,越界部分一笔不画,标签 = 缺陷 ∩ 检测区,区外刀纹原样;③ 规格复检三道关——≥10px、入区分档(贴边 ≥35%/内部 ≥70%)、整体面积 0.70~1.30 倍实测区间(小孔可按整孔覆盖 ≥70% 兜底);④ 可见性门槛加倍到 8 灰度级,均值或 75 分位任一达标即过。</figcaption>
+    <figcaption>落地复检四格:① 贴边落锚——锚点在区内近边带、缺陷主体顶到检测区边界,求解时区外先铺"区内中值桌布"(仅供泊松求解器使用);② 回写后——残差<b>严格裁回检测区内</b>,越界部分一笔不画,标签 = 缺陷 ∩ 检测区,区外刀纹原样;③ 入区复检——区内 ≥8px,区边缘落位 ≥15%、区内落位 ≥70%;④ 可见性门槛 8 灰度级,均值或 75 分位任一达标即过。</figcaption>
   </figure>
 
   <div class="co plain">
     <span class="tag">💡 大白话:贴着墙根画,但笔不越墙</span>
-    <p>贴在加工面边缘的缺陷,新版让它<b>顶到分区边界为止</b>:调光师可以在墙根把光影处理得自然(桌布随便铺),但<b>成品笔触一毫米都不越墙</b>——越界的部分留给想象,画出来就是污染(把亮斑染进相邻的槽,模型学会"跨区找缺陷"就麻烦了)。落笔前还要过三道验收:区内够 10px、四分之三以上的身子在墙内、个头在实测区间——不合格整题重抽。</p>
+    <p>贴在检测区边缘的缺陷<b>顶到边界为止</b>:区内的笔触处理得再自然,<b>正常背景(label=0)一毫米都不碰</b>;只有越出到所有区并集之外的"无人区"才按 30/40/30 随机化地融一点过渡——画出来就是污染,模型学会"跨区找缺陷"就麻烦了。落笔前还要过两道验收:区内够 8px、入区比例达标(边缘 ≥15% / 内部 ≥70%)——不合格整题重抽。</p>
   </div>
 
   <h3>8.7 第⑧步:GT 标签——一张图三种值</h3>
@@ -2145,10 +2079,10 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
       <rect x="450" y="30" width="200" height="130" rx="6" fill="#fdf6e3" stroke="#f0e2b6" stroke-width="2"/>
       <path d="M505,75 C517,72 527,80 528,91 C529,104 519,112 507,112 C495,112 488,103 490,92 C492,83 497,77 505,75 Z" fill="#eab308" stroke="#eab308" stroke-width="8" opacity=".6" stroke-linejoin="round"/>
       <path d="M505,75 C517,72 527,80 528,91 C529,104 519,112 507,112 C495,112 488,103 490,92 C492,83 497,77 505,75 Z" fill="none" stroke="#7c2d12" stroke-width="1.4" stroke-dasharray="4 3"/>
-      <text x="550" y="140" text-anchor="middle" class="tm">真缺陷+外扩8px:整块 255,虚线=实际轮廓</text>
+      <text x="550" y="140" text-anchor="middle" class="tm">沾标注的块:整块跳过,不进题池</text>
       <text x="550" y="178" text-anchor="middle" class="tb">忽略区 = 255(检测区外同)</text>
     </svg>
-    <figcaption>GT 标签三值:检测区内——合成缺陷 1 / 正常 0;检测区外、以及底图真缺陷<b>连同外扩 8px 过渡带</b>——整块 255,Loss 逐点跳过(不教不罚)。读完后图像与标签一起过 albumentations 增强(水平/垂直翻转、亮度/对比度 ±0.15、20% 概率轻微高斯噪点),框随翻转走。</figcaption>
+    <figcaption>GT 标签三值:有效检测区内——贴入缺陷 1 / 正常 0;有效检测区外——整块 255,Loss 逐点跳过(不教不罚;沾到真缺陷标注的块根本不进题池)。读完后图像与标签一起过 albumentations 增强(水平/垂直翻转、亮度/对比度 ±0.15、20% 概率轻微高斯噪点),框随翻转走。</figcaption>
   </figure>
 
   <p><b>忽略区(255)从哪来、为什么?</b>它专门给两类"教不准或不用教"的像素——<b>检测区外</b>(那里根本不检,不用学)和<b>底图自带的真实缺陷 + 外扩 8px</b>(人工标注偏紧、边缘说不清,标 0 或 1 都会误导,干脆跳过):</p>
@@ -2170,7 +2104,7 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
       <circle cx="62" cy="66" r="9" fill="#23211c"/>
       <text x="62" y="70" text-anchor="middle" font-size="10" fill="#fff">3</text>
       <text x="40" y="228" class="tm">① 合成缺陷 = 1(贴上去的,边界精确已知)</text>
-      <text x="40" y="246" class="tm">② 真缺陷 + 外扩 8px = <b>整块</b> 255(虚线=真缺陷实际轮廓;标注偏紧 → 跳过+修补)</text>
+      <text x="40" y="246" class="tm">② 沾到标注的块 → <b>整块跳过</b>(真缺陷永不进训练题,图示仅为反例)</text>
       <text x="40" y="264" class="tm">③ 检测区外(黄) = 255(根本不检,不学)</text>
       <text x="40" y="282" class="tm">其余检测区内 = 0(正常背景)</text>
 
@@ -2186,17 +2120,17 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
       <text x="415" y="176" class="tm" fill="#15803d">⏭ 不教不罚(Loss 逐点跳过)</text>
 
       <rect x="366" y="200" width="290" height="88" rx="8" fill="#fdf6e3" stroke="#f0e2b6" stroke-width="1.5"/>
-      <text x="511" y="222" text-anchor="middle" class="tb">为什么真缺陷不直接标 1?</text>
-      <text x="378" y="244" class="tm">人工标注偏紧,外圈 2~4px 说不清是缺陷还是背景:</text>
-      <text x="378" y="262" class="tm">标 0 → 教模型压住真缺陷边缘;标 1 → 边界又不准。</text>
-      <text x="378" y="280" class="tm">跳过最稳——教学交给边界精确的合成缺陷。</text>
+      <text x="511" y="222" text-anchor="middle" class="tb">为什么真缺陷不进训练题?</text>
+      <text x="378" y="244" class="tm">沾标注的 512 块整块跳过,真缺陷不进训练题:</text>
+      <text x="378" y="262" class="tm">人工标注偏紧,当答案教容易带偏边缘认知;</text>
+      <text x="378" y="280" class="tm">教学全交给边界精确、明暗可控的贴图缺陷。</text>
     </svg>
-    <figcaption>忽略区(255)全景:一张切块的标签里,① 合成缺陷标 1;② 底图自带的真缺陷连同外扩 8px 的过渡带标 255(合成缺陷落点无需避开——底图已净化);③ 检测区外整片标 255。右半张是"阅卷规则":1 区 / 0 区答错要扣分,255 区像考卷上印着"此题不计分"——Loss 逐点跳过,不教不罚。</figcaption>
+    <figcaption>三值标签全景:一张干净切块的标签里,① 贴入的合成缺陷标 1(边界精确已知);② 沾到真缺陷标注的块根本不进题池(整块跳过,真缺陷永不进训练题——图中②仅为"若不跳过"的反例示意);③ 有效检测区外整片标 255。右半张是"阅卷规则":1 区 / 0 区答错要扣分,255 区像考卷上印着"此题不计分"——Loss 逐点跳过,不教不罚。</figcaption>
   </figure>
 
   <div class="co plain">
     <span class="tag">💡 大白话:阅卷老师的"翻页"</span>
-    <p>1 区和 0 区是<b>必批题</b>,答错扣分;255 区像考卷上印着"<b>此题不计分</b>"——学生在那儿写什么,阅卷老师直接翻页,不奖不罚。为什么真缺陷要印这句?因为<b>老师自己也拿不准标准答案</b>(标注偏紧、边缘说不清)——与其教错,不如不教,让标准答案精确的合成题(①)负责教学。</p>
+    <p>1 区和 0 区是<b>必批题</b>,答错扣分;255 区像考卷上印着"<b>此题不计分</b>"——学生在那儿写什么,阅卷老师直接翻页,不奖不罚。为什么真缺陷不进训练题?因为<b>老师标注偏紧、边缘说不清</b>,与其教错不如不教;再说真缺陷的价值早已在抠真实小图、训 LoRA、量规格时兑现——教学全交给标准答案精确的贴图题(①)。</p>
   </div>
 
   <div class="co plain">
@@ -2209,27 +2143,26 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
     <p>GT 标签像发给模型的作战地图,三色分明:<b>白色(1)= 敌人</b>(缺陷),见到就打;<b>灰色(0)= 平民</b>(正常金属),绝对不许碰;<b>黄色(255)= 禁区</b>(检测区外、真缺陷边缘过渡带)——停火,既不奖也不罚,模型不用对这里表态。</p>
   </div>
 
-  <h3>8.8 事件线 5.1 · 底图"洗澡":纯三类净化(.clean.png)</h3>
-  <p>底图上"不能当正常背景"的区域,阶段 5.1 归纳为<b>纯三类</b>,各类按各自半径外扩后统一用区内正常背景 <code class="inl">cv2.inpaint</code> 插值抹平,产出<b>净化训练底图</b>(存 <code class="inl">aligncache/…​.clean.png</code>,训练切块全部从它裁;指纹缓存跨会话复用),并在训练标签中标 <span class="kn">255</span> 忽略区(若 5.2 在其上新贴缺陷则覆盖为 1):</p>
+    <h3>8.8 底图不"洗澡":跳过脏块,只用 100% 干净的原始像素</h3>
+  <p>老版会把底图上的真缺陷、排除区、边界污染三类区域 inpaint 抹平后接着用;新版彻底放弃修补——<b>零净化</b>:切块时把<b>沾到任何标注(缺陷或「排除」,含安全外扩 <span class="kn">4px</span>)</b>或<b>不含有效检测区</b>的 512 块<b>整块跳过</b>,留下的每一块都是 100% 无瑕的原始相机像素。两道保障:</p>
   <ul>
-    <li><b>① 已标注的真实缺陷</b>——外扩 <span class="kn">8px</span>(包住缺陷外沿过渡带,ANN_DILATE=8,椭圆核整圈等距);</li>
-    <li><b>② 人工「排除」区</b>——反光亮斑等非考核干扰,同样外扩 <span class="kn">8px</span>;</li>
-    <li><b>③ 对齐微偏的边界污染</b>——各图对齐后在<b>紧贴分区边界内侧 ≤5.5px</b> 的带里,按<b>各向同性边缘梯度 ‖∇G‖ 与"相对本区内部噪底的自适应信噪比"</b>检出的跨区轮廓线/色差污染(兼容锯齿状分区边缘与小色差轮廓),外扩 <span class="kn">2px</span> 抹平。</li>
+    <li><b>极小区保障</b>:某小检测区若因 8:2 随机划分把唯一干净底图分进了早停集,系统自动把它<b>换回训练池</b>;若整个点位切不出任何干净块,开局直接红字提示"补 15~20 张该区的 OK 底图";</li>
+    <li><b>补块也须干净</b>:骑缝小连通域的自动补块,同样跳过含标注的位置。</li>
   </ul>
   <div class="co plain">
-    <span class="tag">💡 大白话:给底图"洗澡"</span>
-    <p>老师画过圈的真缺陷和反光区(①②),"打码"(255 不教不罚)之后直接<b> P 成干净金属</b>;对齐总差那么一两像素,会把隔壁分区的轮廓线"印"到本区边上(③)——程序拿"边缘梯度显著超出本区噪底"当指纹,把这条印渍也找出来轻轻抹掉。三类各按需外扩,模型见到的底图永远干干净净,学到的"正常"才名副其实。</p>
+    <span class="tag">💡 大白话:不洗澡,改挑干净的房间</span>
+    <p>老版像把每间有污渍的房重新粉刷再用——粉刷就是"猜",猜得再好也不是真实纹理。新版直接<b>只挑一尘不染的房间用</b>:脏的整间锁上,干净的一间不落。模型见到的永远是 100% 真实的表面,连"被修补过"这个概念都不存在。</p>
   </div>
   <div class="co why">
-    <span class="tag">🎯 为什么"纯三类",不猜漏标缺陷了?</span>
-    <p>早期版本还做过"多图对比自动揪未标注暗坑/亮斑"的第四类猜测,但误判风险(把刀纹/材质差异当漏标缺陷抹掉)大于收益,已移除——<b>漏标问题交还给流程解决</b>:训前用「老表,标我.exe」补标(体检要求每类 ≥4 实例),底图净化只处理"确定知道不该当背景"的三类,宁缺毋滥。</p>
+    <span class="tag">🎯 为什么敢整块扔?"浪费"多吗?</span>
+    <p>不算账不知道:标注在整图上通常只占零头,一张图几十个块里往往只跳过一两块;而且 NG 图的价值早已通过<b>抠真实小图、训 LoRA、量规格</b>兑现,图像部分是"锦上添花"。宁可少几块干净教材,绝不教一笔"猜出来的纹理"。</p>
   </div>
 </section>
 
 <!-- ================= 第 9 章 ================= -->
 <section id="model">
-  <div class="chap"><span class="chapno">第 9 章</span><h2>事件线 5.3 · 模型与训练:一位"带眼力底子"的新学员</h2></div>
-  <div class="chapref">对应 README 事件线 5.3 + seg.py / trainer.py 源码</div>
+  <div class="chap"><span class="chapno">第 9 章</span><h2>模型与训练:一位"带眼力底子"的新学员</h2></div>
+  <div class="chapref">对应 README 宏观大流程 4 + seg.py / trainer.py 源码</div>
 
   <p>进入本章前,先把两个最底层的问题掰开:<b>模型是什么?训练在干什么?</b></p>
   <p><b>模型 = 一台"亿万旋钮的答题机器"</b>:吃进一个 512×512 图块(灰度复制成 3 通道),经过几十层加工,吐出一张同尺寸的<b>热力图</b>——每个像素一个 0~1 的分数,越亮越像缺陷。它体内没有"缺陷长这样"的图片库,只有几十亿个数字旋钮;<b>旋钮拧在哪个位置,决定了它现在怎么答题</b>。</p>
@@ -2584,8 +2517,8 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
 
 <!-- ================= 第 10 章 ================= -->
 <section id="exam">
-  <div class="chap"><span class="chapno">第 10 章</span><h2>事件线 5.4~5.5 · 验证、考试与早停</h2></div>
-  <div class="chapref">对应 README 事件线 5.4~5.5 + trainer / exam 源码</div>
+  <div class="chap"><span class="chapno">第 10 章</span><h2>验证、考试与早停</h2></div>
+  <div class="chapref">对应 README 宏观大流程 4~5 + trainer / exam 源码</div>
 
   <h3>10.1 val_loss:固定题集,固定尺子</h3>
   <p>每轮结束在<b>验证集</b>上算 val_loss:验证图按固定种子贴好<b>同一批缺陷</b>(EMA 权重、不增强),用<b>全像素稠密口径</b>(dense_masked_sums)算 Focal + 3×Dice——同一批题、同一把尺,跨轮分数直接比大小,无随机波动。<b>训练和验证现在用同一把尺</b>(loss_utils 统一实现,口径完全同构——早期训练用 PointRend 抽点的"聪明尺"已退役,见 9.2);口径里两个讲究不变:<b>focal 按全部有效像素平均</b>(含正常背景,专量误报倾向),<b>dice 只按含缺陷的样本平均</b>(纯净块的 dice 恒 ≈1,混进平均只会稀释信号)。</p>
@@ -2658,7 +2591,7 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
   </div>
 
   <h3>10.2 早停:练到进步停滞就收工</h3>
-  <p>练满 <span class="kn">8</span> 轮(MIN_EPOCHS)后,val_loss 连续 <span class="kn">4</span> 轮(PATIENCE)不降(降幅需超 1e-4)即触发早停——防过拟合,也省时间。注意:早停只管"停不停",<b>选型看的是考试总交集</b>,不是 val_loss。</p>
+  <p>练满 <span class="kn">max(8, 分片数)</span> 轮后,val_loss 连续 <span class="kn">4</span> 轮(PATIENCE)不降(降幅需超 <span class="kn">2e-3</span>)即触发早停——防过拟合,也省时间;分片轮转完毕前早停不生效(保证全部底图块轮到)。注意:早停只管"停不停",<b>选型看的是考试综合质量分</b>,不是 val_loss。</p>
 
   <figure class="fig">
     <svg viewBox="0 0 680 260" role="img" aria-label="早停与best选型分工图:左边val_loss模拟考只决定还练不练,右边期末考试综合质量分只决定留谁当best,互不越权">
@@ -2670,7 +2603,7 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
       <text x="105" y="108" text-anchor="middle" class="tm">同一批题</text>
       <text x="105" y="126" text-anchor="middle" class="tm">每轮考一次</text>
       <text x="175" y="162" text-anchor="middle" class="t">只回答:还练不练?</text>
-      <text x="175" y="184" text-anchor="middle" class="tm">练满 8 轮后连续 4 轮不降 → 收工</text>
+      <text x="175" y="184" text-anchor="middle" class="tm">练满 max(8,分片) 轮后连续 4 轮不降 → 收工</text>
       <text x="175" y="202" text-anchor="middle" class="tm" fill="#dc2626">分数高低不决定谁能毕业</text>
 
       <rect x="355" y="44" width="300" height="170" rx="10" fill="#fdf0e7" stroke="#e7b58a" stroke-width="2"/>
@@ -2685,7 +2618,7 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
       <rect x="25" y="226" width="630" height="24" rx="8" fill="#e9f6ee" stroke="#86d3a1"/>
       <text x="340" y="243" text-anchor="middle" class="t">互不越权:val_loss 再低不保送,考试分再高不延时——练多久看模拟考,交谁看期末考</text>
     </svg>
-    <figcaption>早停与 best 选型的分工:模拟考(val_loss,固定题集)只当"训练时长的刹车";期末考(val/ 独立考卷的综合质量分)只当"毕业生的裁判"。两个开关各管各的,谁也不能替谁做主。</figcaption>
+    <figcaption>早停与 best 选型的分工:模拟考(val_loss,固定题集,练满 max(8, 分片数) 轮才可能刹车)只当"训练时长的刹车";期末考(val/ 独立考卷的综合质量分)只当"毕业生的裁判"。两个开关各管各的,谁也不能替谁做主。</figcaption>
   </figure>
 
   <h3>10.3 考试:整图推理 → 加权拼缝 → 交集计分</h3>
@@ -2749,7 +2682,7 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
 
   <div class="co plain">
     <span class="tag">💡 考题的答案(标注)从哪来?</span>
-    <p><b>人画的,不是机器造的</b>:现场拍下真缺陷照片 → 标注人员用「老表,标我.exe」沿缺陷边缘画多边形,存成同名 <code class="inl">.bmp.tmp</code>(第 2 章备料时就放进数据集)→ 体检把带非排除标注的图归为 NG(第 5 章)→ <b>人工手工放入 <code class="inl">{点位}/val/</code> 独立考卷目录</b>,从目录层面与训练池物理隔离(第 7 章)→ 考试时标注经 H⁻¹ 换算到对齐图,再与报警求交集。对比着记:<b>训练题的答案是程序造的</b>(贴哪儿标哪儿,位置精确);<b>考试题的答案是人工画的</b>(真实但边缘偏紧)——所以报警面积不进分数,防标注画漏时冤枉模型。注意「老表,标我.exe」本身<b>不会自动给答案</b>:它只是"画圈记账"的工具(点一圈点、填标签、存 .tmp),判断全靠人;一张图有几个缺陷就画几个圈,<b>漏画的不会被补上</b>(底图侧的漏标会被 5.1 异常自检兜住,但考卷侧没有这层)。也别和 define_masks 搞混——它画的是分区(圈"地盘",产 {基准图名}.json),老表标我画的是缺陷(圈"敌人",产 .tmp)。</p>
+    <p><b>人画的,不是机器造的</b>:现场拍下真缺陷照片 → 标注人员用「老表,标我.exe」沿缺陷边缘画多边形,存成同名 <code class="inl">.bmp.tmp</code>(第 2 章备料时就放进数据集)→ 体检把带非排除标注的图归为 NG(第 5 章)→ <b>人工手工放入 <code class="inl">{点位}/val/</code> 独立考卷目录</b>,从目录层面与训练池物理隔离(第 7 章)→ 考试直接在这张原图上推理、求交集(谁都不用换算)。对比着记:<b>训练题的答案是程序造的</b>(贴哪儿标哪儿,位置精确);<b>考试题的答案是人工画的</b>(真实但边缘偏紧)——所以报警面积不进分数,防标注画漏时冤枉模型。注意「老表,标我.exe」本身<b>不会自动给答案</b>:它只是"画圈记账"的工具(点一圈点、填标签、存 .tmp),判断全靠人;一张图有几个缺陷就画几个圈,<b>漏画的不会被补上</b>(底图侧靠"跳过含标注块"天然免疫,但考卷侧没有这层兜底)。也别和 define_masks 搞混——它画的是分区(圈"地盘",产 {基准图名}.json),老表标我画的是缺陷(圈"敌人",产 .tmp)。</p>
   </div>
 
   <figure class="fig">
@@ -2778,54 +2711,15 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
       <text x="510" y="190" text-anchor="middle" class="tm">黄色 = 计分交集(双方都用实际形状)</text>
 
       <rect x="20" y="208" width="640" height="26" rx="8" fill="#e9f6ee" stroke="#86d3a1"/>
-      <text x="340" y="226" text-anchor="middle" class="t" fill="#15803d">综合质量分 = 命中数×1000 + 总交集像素 − 0.1×标注外误报像素 · 阈值 0.5 写死 · 单图超 10s 当轮作废并告警</text>
+      <text x="340" y="226" text-anchor="middle" class="t" fill="#15803d">综合质量分 = 命中数×3000 + 总交集像素 − 0.05×标注外误报像素 · 阈值 0.5 写死 · 单图 GPU 推理超 10s 当轮作废</text>
     </svg>
-    <figcaption>考试三步:考卷整图切块推理(步长 384、重叠 128px,重叠带按"此消彼长"的线性权重窗交叉淡入拼回——块边预测最不准,自动降权,热力图无拼缝);超 0.5 报警;与人工标注(随对齐变换 H⁻¹ 搬回基准系)求交集。计分用综合质量分:检出 1 个缺陷 +1000、交集 1 像素 +1、<b>标注外每 10 像素误报 −1</b>(惩罚刻意放轻——标注不全时报警里可能含未标注的真缺陷,重罚会冤枉模型)。</figcaption>
+    <figcaption>考试三步:考卷整图切块推理(步长 384、重叠 128px,重叠带按"此消彼长"的线性权重窗交叉淡入拼回——块边预测最不准,自动降权,热力图无拼缝);超 0.5 报警;与人工标注(都在同一张原图上,直接求交集)。计分用综合质量分:检出 1 个缺陷 +3000、交集 1 像素 +1、<b>标注外每 20 像素误报 −1</b>(惩罚刻意放轻——标注不全时报警里可能含未标注的真缺陷,重罚会冤枉模型);考卷的「排除」区先从计分区扣除。</figcaption>
   </figure>
 
   <div class="co plain">
-    <span class="tag">💡 大白话:老师的圈和模型的圈,画在两张不同的照片上</span>
-    <p>你给同一面墙拍两张照片,手抖一下,第二张里挂钟的位置就偏了一点——工厂相机也一样,<b>每次拍照零件位置都有微小偏移</b>。第 6 章的程序会把每张照片"<b>掰正</b>"到和标准样张对齐,考试就在掰正后的照片上做(模型圈的<b>红圈</b>画在它上面);可<b>老师当年画标注时,照片还是歪的</b>——老师的<b>橙圈</b>画在原片上。两张照片错开几个像素,两个圈直接叠着比就全错位、交集几乎为零。解决办法:用一张现成的"<b>点位换算表</b>",把老师圈的<b>每个点逐个换算</b>到掰正后的照片上——两个圈终于叠在同一张照片上,再比重合面积。</p>
+    <span class="tag">💡 大白话:考试在原图上,谁都不搬</span>
+    <p>老版要把照片"摆正"后考试,老师画的圈和模型圈的圈分属两个坐标系,得拿换算表誊来誊去。新版直接<b>在 val 原图上推理</b>:模型看到的是原片、老师画的是原片、考场范围(圆滑有效检测区,自动扣除「排除」区)也誊在原片上——三方同一个坐标系,拿过来就能比,连"换算方向"这个易错概念都不存在了。</p>
   </div>
-
-  <figure class="fig">
-    <svg viewBox="0 0 680 225" role="img" aria-label="两个圈两张照片图解:老师橙圈画在歪的原片上,模型红圈画在掰正后的照片上,经点位换算表把橙圈挪到正片上两圈重合求交集">
-      <text x="115" y="26" text-anchor="middle" class="tb">① 老师画圈:照片还是歪的</text>
-      <g transform="rotate(2.5 115 105)">
-        <rect x="30" y="40" width="170" height="130" rx="4" class="metal"/>
-        <ellipse cx="120" cy="105" rx="22" ry="16" class="defect"/>
-        <ellipse cx="120" cy="105" rx="30" ry="22" fill="#fde68a" opacity=".3"/>
-        <ellipse cx="120" cy="105" rx="30" ry="22" fill="none" stroke="#b45309" stroke-width="2"/>
-      </g>
-      <text x="115" y="196" text-anchor="middle" class="tm">橙圈 = 人工标注,画在原片上</text>
-
-      <path d="M 222,105 L 248,105" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
-      <text x="235" y="92" text-anchor="middle" class="tm">掰正</text>
-
-      <text x="345" y="26" text-anchor="middle" class="tb">② 模型做题:照片已掰正</text>
-      <rect x="260" y="40" width="170" height="130" rx="4" class="metal"/>
-      <ellipse cx="368" cy="102" rx="22" ry="16" class="defect"/>
-      <ellipse cx="368" cy="102" rx="30" ry="22" fill="none" stroke="#dc2626" stroke-width="2" stroke-dasharray="6 4"/>
-      <text x="345" y="196" text-anchor="middle" class="tm">红虚圈 = 模型报警,画在正片上</text>
-      <text x="345" y="212" text-anchor="middle" class="tm" fill="#dc2626">两照片错开几个像素,不能直接叠</text>
-
-      <path d="M 442,105 L 478,105" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#ah1)"/>
-      <text x="460" y="90" text-anchor="middle" class="tm">换算</text>
-
-      <text x="570" y="26" text-anchor="middle" class="tb">③ 换算后:两圈同图 → 求交集</text>
-      <rect x="485" y="40" width="170" height="130" rx="4" class="metal"/>
-      <ellipse cx="580" cy="102" rx="22" ry="16" class="defect"/>
-      <ellipse cx="578" cy="104" rx="30" ry="22" fill="#fde68a" opacity=".35"/>
-      <ellipse cx="578" cy="104" rx="30" ry="22" fill="none" stroke="#b45309" stroke-width="2"/>
-      <ellipse cx="582" cy="100" rx="30" ry="22" fill="none" stroke="#dc2626" stroke-width="2" stroke-dasharray="6 4"/>
-      <ellipse cx="580" cy="102" rx="24" ry="17" fill="#15803d" opacity=".22"/>
-      <text x="570" y="196" text-anchor="middle" class="tm">橙圈按"点位换算表"逐点挪到正片上</text>
-      <text x="570" y="212" text-anchor="middle" class="tm" fill="#15803d">两圈同图 → 重合面积 = 交集 ✓</text>
-    </svg>
-    <figcaption>"随对齐变换 H⁻¹ 搬回基准系"的白话版:老师的橙圈画在<b>歪的原片</b>上,模型的红圈画在<b>掰正后的照片</b>上——两张照片错开几个像素,直接叠着比会全部错位。先用"点位换算表"把橙圈的每个点逐个换算到正片上,两个圈叠在同一张照片,绿色重合部分才作数。</figcaption>
-  </figure>
-
-  <p class="fnote">这张"点位换算表"从哪来?就是第 6 章对齐时算好的"摆放说明书" H(掰正用的正向表),反着查一遍就是 H⁻¹ —— 机制与图解见 6.3 细节⑤。</p>
 
   <p><b>谁和谁拼?</b>先把对象说死:照片切块只是"喂题"的动作,<b>拼回去的是每块各自的答卷——热力图块</b>。相邻两块的答卷(块 A 的和块 B 的)在重叠带里相遇,同一个像素手里有两份分数,按位置加权合一份:</p>
 
@@ -2953,7 +2847,7 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
   <ul>
     <li><b>权重窗公式</b>(blend_window):窗重 w = min(i/ramp, (ts−i)/ramp) 双向取小(ramp = 重叠带 <span class="kn">128px</span>),中心 1.0、块边趋 0;相邻两块在重叠带内权重<b>此消彼长、和恒为 1</b>(线性交叉淡入)——热力图在块缝处连续无缝;</li>
     <li><b>全程 GPU</b>:整幅 1200 万像素图以 uint8 一次上显存(约 12MB),切块、归一化、推理、加权缝合、检测区清零<b>全在显存完成</b>,主机侧只一次上传一次取回;</li>
-    <li><b>推理细节</b>:bf16 自动混合精度 + sigmoid 概率化;输出尺寸与输入不齐时双线性插值兜底;标注多边形经 H⁻¹ 搬回基准系后用 <code class="inl">fillPoly</code> 栅格化,再与报警像素求交集;</li>
+    <li><b>推理细节</b>:bf16 自动混合精度 + sigmoid 概率化;输出尺寸与输入不齐时双线性插值兜底;考卷图/标注多边形/圆滑有效检测区<b>开局预解码缓存</b>,标注直接在原图栅格化后与报警求交集(无任何坐标搬运);</li>
     <li><b>考前内存探针</b>:垃圾回收 + 归还系统堆 + 清空显存缓存,并记录分配重试/OOM 计数——久训后考试变慢,先看这里;</li>
     <li><b>工程坑规避</b>:多卡广播早停分数不走 torch 2.5.1 的 broadcast_object_list(NCCL 下有 bug),标量改用张量直传。</li>
   </ul>
@@ -2971,7 +2865,7 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
   <h3>10.4 存档与 best 选型</h3>
   <ul>
     <li><b>逐轮存档</b>:总交集 &gt; 0 的轮,EMA 权重 + score.txt 存 <code class="inl">.tmp/ep{轮}/</code>(监控页柱状图数据源);每轮无论分数都覆盖一份 <code class="inl">.tmp/latest/</code>;</li>
-    <li><b>唯一 best</b>(综合质量分选型):<b>quality_score = 命中数 hit_defects × 1000 + 总交集像素 − 0.1 × 标注外误报像素</b>——检出 1 个缺陷 +1000、交集 1 像素 +1、误报 10 像素 −1,兼顾"检出全、定位准、误报少";综合分创新高才写 models/(同分依次比检出数、总交集),新超旧删旧——models/ 里永远只有一个 <code class="inl">best_int{交集}_ep{轮}.pth</code>,元数据同时记录命中数与综合分;</li>
+    <li><b>唯一 best</b>(综合质量分选型):<b>quality_score = 命中数 hit_defects × 3000 + 总交集像素 − 0.05 × 标注外误报像素</b>——检出 1 个缺陷 +3000、交集 1 像素 +1、误报 20 像素 −1,优先保召回、兼顾定位与抑制误报;综合分创新高才写 models/(同分依次比检出数、总交集),新超旧删旧——models/ 里永远只有一个 <code class="inl">best_int{交集}_ep{轮}.pth</code>,元数据同时记录命中数与综合分;</li>
     <li>全程总交集恒为 0 → 不产 best,大声告警提示人工排查(逐轮权重还在 .tmp/ep*/ 里,可指定 --base 再练)。</li>
   </ul>
 
@@ -2982,9 +2876,9 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
       <rect x="25" y="44" width="200" height="88" rx="10" fill="#e9f6ee" stroke="#86d3a1" stroke-width="2"/>
       <circle cx="62" cy="88" r="20" fill="#fde68a" opacity=".5"/>
       <circle cx="62" cy="88" r="20" fill="none" stroke="#b45309" stroke-width="1.6"/>
-      <text x="62" y="94" text-anchor="middle" class="tb" fill="#15803d">+1000</text>
+      <text x="62" y="94" text-anchor="middle" class="tb" fill="#15803d">+3000</text>
       <text x="128" y="80" class="t">检出 1 个真缺陷</text>
-      <text x="128" y="102" class="tm">找到 = 大功,一顶一千</text>
+      <text x="128" y="102" class="tm">召回优先,一顶三千</text>
 
       <rect x="240" y="44" width="200" height="88" rx="10" fill="#eaf2fe" stroke="#93b4f5" stroke-width="2"/>
       <circle cx="277" cy="88" r="20" fill="#bfdbfe" opacity=".6"/>
@@ -2997,40 +2891,39 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
       <circle cx="492" cy="88" r="20" fill="#fecaca" opacity=".6"/>
       <circle cx="492" cy="88" r="20" fill="none" stroke="#dc2626" stroke-width="1.6"/>
       <text x="492" y="94" text-anchor="middle" class="tb" fill="#b91c1c">−1</text>
-      <text x="558" y="80" class="t">标注外误报 10 像素</text>
+      <text x="558" y="80" class="t">标注外误报 20 像素</text>
       <text x="558" y="102" class="tm">乱报轻微倒扣,防碰巧</text>
 
       <rect x="25" y="150" width="630" height="100" rx="10" fill="#fbfaf6" stroke="#d8d2c0" stroke-width="1.6"/>
       <text x="55" y="178" class="tb">例:本轮全部考卷上共 3 个真缺陷</text>
-      <text x="55" y="204" class="t">模型检出 3 个(+3000) · 与标注重合 1500 像素(+1500) · 标注外多报 200 像素(−20)</text>
-      <text x="55" y="232" class="tb" fill="#15803d">综合质量分 = 3000 + 1500 − 20 = 4480 → 与历史最高比,破纪录才当 best</text>
+      <text x="55" y="204" class="t">模型检出 3 个(+9000) · 与标注重合 1500 像素(+1500) · 标注外多报 200 像素(−10)</text>
+      <text x="55" y="232" class="tb" fill="#15803d">综合质量分 = 9000 + 1500 − 10 = 10490 → 与历史最高比,破纪录才当 best</text>
     </svg>
-    <figcaption>综合质量分 = 检出数 × 1000 + 总交集像素 − 0.1 × 标注外误报像素:检出是大头(漏一个丢 1000),交集奖励圈得准,误报只轻罚(标注不全时报警里可能混着没标到的真缺陷,重罚会冤枉模型)。同分时依次比检出数、再比总交集,分出高下才罢休。</figcaption>
+    <figcaption>综合质量分 = 检出数 × 3000 + 总交集像素 − 0.05 × 标注外误报像素:检出是大头(漏一个丢 3000,召回优先),交集奖励圈得准,误报只轻罚(标注不全时报警里可能混着没标到的真缺陷,重罚会冤枉模型)。同分时依次比检出数、再比总交集,分出高下才罢休。</figcaption>
   </figure>
 
   <div class="co plain">
     <span class="tag">💡 什么算"考过"?—— 刷纪录的赛马制</span>
     <p>考试<b>没有绝对及格线</b>,只跟自己的历史最高比,四种结局:</p>
     <ul style="margin:6px 0">
-      <li>✅ <b>创纪录</b>:综合质量分(命中数×1000 + 总交集 − 0.1×误报)超历史最高 → 本轮 EMA 权重当上 best,写入 models/ 并刷新 deploy 包(唯一被"考过"的情形);</li>
+      <li>✅ <b>创纪录</b>:综合质量分(命中数×3000 + 总交集 − 0.05×误报)超历史最高 → 本轮 EMA 权重当上 best,写入 models/ 并刷新 deploy 包(唯一被"考过"的情形);</li>
       <li>😐 <b>会画但没破纪录</b>:分数 &gt; 0 却不超历史最高 → 存档 .tmp/ep{轮}/,不交付;</li>
       <li>❌ <b>一分没捞着</b>:总交集 = 0 → 本轮不进 best;<b>全程恒为 0</b> → 不产 best、models/ 为空,告警人工排查;</li>
       <li>⚠️ <b>考卷作废</b>:单图超 10 秒(模型病态)或考试异常 → 当轮成绩作废,训练照常继续。</li>
     </ul>
-    <p>"没考过"≠重来:训练不因考砸中断,一直练到早停或轮数上限,考试只决定 <b>best 的归属</b>。误报为什么只轻罚(10 像素扣 1 分)?标注不全时报警里可能混着<u>没被标注的真缺陷</u>——重罚会逼模型学会漏报;但完全不罚又防不住"全场乱报刷检出数"的碰巧模型,0.1 的系数正好两全。</p>
+    <p>"没考过"≠重来:训练不因考砸中断,一直练到早停或轮数上限,考试只决定 <b>best 的归属</b>。误报为什么只轻罚(20 像素扣 1 分)?标注不全时报警里可能混着<u>没被标注的真缺陷</u>——重罚会逼模型学会漏报;但完全不罚又防不住"全场乱报刷检出数"的碰巧模型,0.05 的系数正好两全。</p>
   </div>
 </section>
 
 <!-- ================= 第 11 章 ================= -->
 <section id="deploy">
-  <div class="chap"><span class="chapno">第 11 章</span><h2>事件线 5.5 · 交付落盘:best + deploy 推理包</h2></div>
-  <div class="chapref">对应 README 事件线 5.5 尾段 + §六「deploy/manifest.json 格式说明」</div>
+  <div class="chap"><span class="chapno">第 11 章</span><h2>交付落盘:best + deploy 推理包</h2></div>
+  <div class="chapref">对应 README §四「交付物格式说明(deploy/manifest.json)」</div>
 
   <p>best 刷新的同时,自动汇总<b>开箱即用</b>的推理要素包(整体重建,不留旧点位):</p>
   <pre class="tree"><span class="d">models/{产品}/</span>
  <span class="d">├──</span> <span class="f">best_int1200_ep10.pth</span>      <span class="k"># 唯一最优权重(文件名=总交集+轮次)</span>
- <span class="d">├─ lora/{缺陷名}/</span>                  <span class="a"># 阶段 3 缺陷生成模型(lora_weights + templates/ + manifest.json)</span>
- <span class="d">└── deploy/</span>
+ <span class="d">└── deploy/</span>                           <span class="a"># (LoRA 权重在 .tmp/lora/ 下,属前置中间产物,不随包交付)</span>
      <span class="d">├──</span> <span class="f">manifest.json</span>            <span class="k"># 总清单(推理端一键读取)</span>
      <span class="d">├──</span> <span class="f">tile_size.txt</span>            <span class="a"># 推理切块尺寸 512</span>
      <span class="d">├── JXFB-1-P1/</span>                <span class="a"># 每点位一个子目录,互不覆盖</span>
@@ -3043,6 +2936,8 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
   "weight": "best_int1200_ep10.pth",
   "tile_size": 512,
   "threshold": 0.5,
+  "smooth_for_infer": true,
+  "snap_px": 10,
   "points": {
     "JXFB-1-P1": {
       "ref_name": "P1_1784621125487",
@@ -3060,9 +2955,10 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
     <tr><td><code class="inl">weight</code></td><td>最优权重文件名(models/ 下)</td></tr>
     <tr><td><code class="inl">tile_size</code></td><td>推理切块尺寸(<span class="kn">512</span>)</td></tr>
     <tr><td><code class="inl">threshold</code></td><td>缺陷报警阈值,固定 <span class="kn">0.5</span></td></tr>
+    <tr><td><code class="inl">smooth_for_infer</code> / <code class="inl">snap_px</code></td><td>推理用<b>圆滑有效检测区</b>(true);分区边缘吸附范围 <span class="kn">±10px</span>——推理端照此复现考场范围</td></tr>
     <tr><td><code class="inl">points.{点位}.ref_name</code></td><td>该点位基准图主文件名</td></tr>
     <tr><td><code class="inl">points.{点位}.json / ref_image</code></td><td>相对 deploy/ 的分区定义、基准图路径</td></tr>
-    <tr><td><code class="inl">points.{点位}.zones</code></td><td><b>自动归属</b>绑定的待检分区及其缺陷类型列表(阶段 2.4 实测产出,替代旧版 assets.jsonc)</td></tr>
+    <tr><td><code class="inl">points.{点位}.zones</code></td><td><b>自动归属</b>的待检分区及其缺陷类型列表(实测 auto_zones 产出,替代旧版 assets.jsonc)</td></tr>
   </table>
   </div>
   <div class="co why">
@@ -3086,10 +2982,10 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
 
   <h3>12.2 多卡并行(检测到几张显卡自动几张)</h3>
   <ul>
-    <li>各卡 DDP 并行训练,共享同一<b>均衡配额池</b>、按<b>分片轮换</b>出题(每分片内严格正负 1:1,图极多时跨轮 100% 覆盖全部底图);</li>
+    <li>各卡 DDP 并行训练,共享同一<b>注水预算与牌靴</b>(无放回发牌序号跨卡完全一致,每分片内严格正负 1:1,超大区跨轮分片轮转);</li>
     <li><b>考试由 0 号卡独占执行</b>,其余卡等待(避免重复计算,看门狗放宽到 60 分钟);</li>
-    <li><b>阶段 3 的 FLUX 合成也吃多卡</b>:LoRA 重绘任务按卡交错分片并行,合成配额补足后<b>立即卸载 FLUX 释放全部显存</b>,再开始分割训练——两段任务不抢显存;</li>
-    <li>对齐整图有 <b>LRU 内存缓存</b>:预算 =(可用内存 − 8G)× 0.6,由全部缓存持有者均分——同一张大图被它切出的几十个块反复读,缓存后每样本省一次 12MP PNG 解码(约 50ms);新版再加<b>父进程预热 + 写时复制(COW)只读共享</b>:预热在父进程完成后,DataLoader 子进程 fork 直接共享物理内存,避免约 1.6GB 图像经进程间管道序列化搬运,worker 内惰性填充;</li>
+    <li><b>阶段 1~2 的 FLUX 训练与合成也吃多卡</b>:LoRA 训练 DDP 并行、重绘任务按卡交错分片,配额补足后<b>立即卸载 FLUX 释放全部显存</b>,再开始分割训练——两段任务不抢显存;</li>
+    <li>原始底图有 <b>LRU 内存缓存</b>:预算 =(可用内存 − 8G)× 0.6,由全部缓存持有者均分——同一张大图被它切出的几十个块反复读,缓存后每样本省一次 12MP 位图解码(几十毫秒);新版再加<b>父进程预热 + 写时复制(COW)只读共享</b>:预热在父进程完成后,DataLoader 子进程 fork 直接共享物理内存,避免约 1.6GB 图像经进程间管道序列化搬运,worker 内惰性填充;</li>
     <li>开训前先做<b>考试算型暖机</b>:用考试的两个极端批尺寸(16/8)走一遍 bf16 前向,固化算子计划,避免久训后考试首图冷启动卡顿。</li>
   </ul>
 
@@ -3099,7 +2995,7 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
   </div>
 
   <h3>12.3 监控页的渲染机制与全工程技术栈</h3>
-  <p><b>按需推理渲染</b>(web.py 的 Renderer):页面想看哪张 NG 图,才装载对应权重<b>现推</b>一张全分辨率热力图;热力图内存缓存 <span class="kn">3 张</span>(每张约 49MB)——<b>改报警阈值只重画描色、不重新推理</b>;鼠标悬停读置信度用 8 倍降采样图(轻快)。状态跨进程传递靠 <code class="inl">.tmp/web/</code> 下的文件(status.json 原子覆盖、曲线与告警逐行追加、成绩从各轮 score.txt 扫描);web 服务端是<b>零依赖的标准库 http.server</b>(多线程版)——不装任何 web 框架。</p>
+  <p><b>按需推理渲染</b>(web.py 的 Renderer):页面想看哪张 NG 图,才装载对应权重<b>现推</b>一张全分辨率热力图;底图直接用<b>原始 val 原图</b>并烘焙橙色检测区边界(JPEG 编码一次、底图/热力图/模型三层缓存);热力图内存缓存 <span class="kn">3 张</span>(每张约 49MB)——<b>改报警阈值只重画描色、不重新推理</b>;鼠标悬停读置信度用 8 倍降采样图(轻快);权重下拉列表会<b>高亮标注 best 模型</b>及其检出成绩。状态跨进程传递靠 <code class="inl">.tmp/web/</code> 下的文件(status.json 原子覆盖、曲线与告警逐行追加、成绩从各轮 score.txt 扫描);web 服务端是<b>零依赖的标准库 http.server</b>(多线程版)——不装任何 web 框架。</p>
 
   <div class="co plain">
     <span class="tag">💡 大白话:想看哪张点哪张</span>
@@ -3131,50 +3027,50 @@ svg .lead{stroke:#9aa2b1;stroke-width:1}
   <table class="tbl">
     <tr><th>数字</th><th>出现在哪</th><th>一句话含义</th></tr>
     <tr><td><span class="kn">val/ 独立</span></td><td>分卷</td><td>考卷 = {点位}/val/ 人工手工放入,绝不进训练池(不再 20% 抽取)</td></tr>
-    <tr><td><span class="kn">≥4 个</span>(MIN_DEFECT_INSTANCES)</td><td>体检/归属</td><td>每种缺陷训练池(含 --reuse)有效实例必须 &gt;3,不足红字退出</td></tr>
-    <tr><td><span class="kn">1~4 张 / 240</span>(动态 k)</td><td>阶段 3.1 LoRA 切片</td><td>每实例切 k=⌈60÷实例数⌉ 夹 1~4 张 512 图块,总上限 240 张</td></tr>
-    <tr><td><span class="kn">1000 步</span></td><td>阶段 3.2 生成 LoRA</td><td>每类缺陷单独训 FLUX.1-Fill LoRA;按标注指纹缓存,变了自动重训</td></tr>
-    <tr><td><span class="kn">3.5σ / 1.8σ / 95 分位</span></td><td>阶段 3.3 合成抠图</td><td>双阈值滞后差分抠假缺陷(σ 分区内测);95 分位信噪比门控;配额缺口最多 3 轮补足</td></tr>
-    <tr><td><span class="kn">8 : 2 · ≤10</span></td><td>分卷</td><td>训练池(根目录全量图)再分训练底图 / 早停集,每点位早停集上限 10 张</td></tr>
-    <tr><td><span class="kn">V = min(5, 200/平均)</span></td><td>用量自适应</td><td>变体数自适应;平均底图 &gt;200 张时按轮分片轮换,跨轮 100% 覆盖、绝不丢图</td></tr>
+    <tr><td><span class="kn">≥4 个</span>(双重口径)</td><td>体检/归属</td><td>每种缺陷全局 &gt;3,且每个 (检测区, 缺陷) 组合也要 ≥4,不足红字退出</td></tr>
+    <tr><td><span class="kn">目标 60 / k 夹 1~4 / 240</span></td><td>阶段 1 LoRA 切片</td><td>每组合凑 60 张:k=⌈60÷实例数⌉ 夹 1~4,总上限 240;不做 inpaint,其他标注权重 0</td></tr>
+    <tr><td><span class="kn">1000 步</span></td><td>阶段 1 生成 LoRA</td><td>每个 (检测区, 缺陷) 一支专属 LoRA;按开局指纹缓存,变了自动重训</td></tr>
+    <tr><td><span class="kn">3.5σ / 1.8σ / 95 分位</span></td><td>阶段 2 合成抠图</td><td>双阈值滞后差分抠假缺陷(σ 只在有效检测区内测);95 分位信噪比门控;整孔 ≥70% 自动闭合</td></tr>
+    <tr><td><span class="kn">8 : 2 · ≤10 · ≤1200</span></td><td>分卷</td><td>训练池再分训练底图 / 早停集(每点位 ≤10 张,全产品验证干净块封顶 1200)</td></tr>
+    <tr><td><span class="kn">√(T×D) 注水</span></td><td>统一预算</td><td>v_base=clip(200÷底图数,1,5);下界 max(100×D, T÷轮数)、上界 5×T,单轮 ≤16000;超大区拆 num_shards=⌈T÷E⌉ 跨轮轮转</td></tr>
     <tr><td><span class="kn">512</span>(tile_size)</td><td>切块/推理</td><td>模型统一输入块边长</td></tr>
     <tr><td><span class="kn">384 / 128</span>(stride)</td><td>切块网格</td><td>步长 = 512×0.75,相邻块重叠 128px;训练集位置随机抖动 ±192(±stride/2)</td></tr>
-    <tr><td><span class="kn">1 : 1 配额</span></td><td>均衡池</td><td>每块·每区·每种缺陷按有效面积折算配额,正负样本精确 1:1 交错编排</td></tr>
+    <tr><td><span class="kn">1 : 1 · 无放回牌靴</span></td><td>题池</td><td>注水权重定出场次数,正负严格 1:1;每 (区,缺陷) 一只牌靴,发完一轮才重洗</td></tr>
     <tr><td><span class="kn">1px</span>(垫边/柔边)</td><td>素材加载/泊松</td><td>贴边素材垫 1px 背景防三角伪影;回写按 1px 高斯柔边</td></tr>
-    <tr><td><span class="kn">50%</span> / <span class="kn">0~360°</span></td><td>素材变换</td><td>水平翻转概率 / 随机旋转(亮度乘法已移除,改为对比度定向合成)</td></tr>
+    <tr><td><span class="kn">50% / 0~360° / 极性</span></td><td>素材变换</td><td>翻转概率 / 随机旋转;极性保持(暗不画亮),对比度按 p50+p75 定向缩放 0.5~6.0</td></tr>
     <tr><td><span class="kn">5~7px</span> 外扩 / <span class="kn">4px</span> 腐蚀</td><td>泊松</td><td>克隆前外扩盖过 OpenCV 内部腐蚀;NORMAL_CLONE(MIXED 会发淡)</td></tr>
-    <tr><td><span class="kn">&gt;0.35 / &gt;0.30</span></td><td>泊松/标签</td><td>0.35 = 克隆用掩码门限;0.30 = GT 标签门限(更低才"低阈值连通",∩ 检测区)</td></tr>
+    <tr><td><span class="kn">&gt;0.35 / &gt;0.30</span></td><td>泊松/标签</td><td>0.35 = 克隆用掩码门限;0.30 = GT 标签门限(∩ 有效检测区)</td></tr>
     <tr><td><span class="kn">≥8</span> 灰度级</td><td>可见性复检</td><td>标签区平均灰度差或 75 分位对比度任一达标(门槛从 4 加倍到 8,防"透明正样本")</td></tr>
-    <tr><td><span class="kn">10 次</span>(PLACE_TRIES)</td><td>出题重试</td><td>失败重抽上限,超限降级纯净块</td></tr>
+    <tr><td><span class="kn">12 次</span>(PLACE_TRIES)</td><td>出题重试</td><td>失败重试上限,超限该区这轮不贴</td></tr>
     <tr><td><span class="kn">×2</span>(SCALE_MAX)</td><td>缩放</td><td>素材放大上限(防失真);缩小不限</td></tr>
-    <tr><td><span class="kn">8px / 8px / 2px</span>(纯三类净化)</td><td>净化底图 5.1</td><td>已标真实缺陷外扩 8px、「排除」区外扩 8px、对齐微偏边界污染(带 ≤5.5px 检出)外扩 2px——统一 inpaint 抹平成 .clean.png 并标 255</td></tr>
-    <tr><td><span class="kn">1 / 0 / 255</span></td><td>GT 标签</td><td>缺陷 / 正常 / 忽略(检测区外 + 真缺陷外扩区)</td></tr>
-    <tr><td><span class="kn">20 / 8 / 4 / 1e-4</span></td><td>轮次与早停</td><td>上限 20 轮;练满 8 轮后 val_loss 连续 4 轮不降(降幅需超 1e-4)早停</td></tr>
+    <tr><td><span class="kn">4px</span>(跳块外扩)</td><td>干净切块</td><td>零净化:沾到任何标注(含外扩 4px)或不含有效检测区的 512 块整块跳过</td></tr>
+    <tr><td><span class="kn">1 / 0 / 255</span></td><td>GT 标签</td><td>贴入缺陷 / 正常 / 忽略(有效检测区外;含标注块根本不进题池)</td></tr>
+    <tr><td><span class="kn">20 / max(8,分片) / 4 / 2e-3</span></td><td>轮次与早停</td><td>上限 20 轮;练满 max(8, num_shards) 轮后 val_loss 连续 4 轮不降(降幅超 2e-3)早停</td></tr>
     <tr><td><span class="kn">4e-4×batch/8</span> / <span class="kn">1e-4</span></td><td>学习率</td><td>主组按 batch 缩放(自动解算);LoRA/bb 组固定小步 1e-4</td></tr>
     <tr><td><span class="kn">3.0 / 0.4 / 2.0</span></td><td>损失</td><td>Dice 权重 ×3;Focal α=0.4、γ=2.0</td></tr>
     <tr><td><span class="kn">0.999</span> / <span class="kn">1.0</span></td><td>EMA / 梯度裁剪</td><td>近期平均权重 decay;max_norm 防暴走</td></tr>
-    <tr><td><span class="kn">0.5</span>(THRESHOLD)</td><td>考试</td><td>报警阈值写死不扫描;单图超 10s 当轮作废</td></tr>
+    <tr><td><span class="kn">0.5</span>(THRESHOLD)</td><td>考试</td><td>报警阈值写死不扫描;单图 GPU 推理超 10s 当轮作废;考卷「排除」区从计分区扣除</td></tr>
     <tr><td><span class="kn">16 / 8</span></td><td>考试批 / autotune</td><td>考试批尺寸 16(暖机含 8);batch = 显存÷3 夹 [8,16]</td></tr>
     <tr><td><span class="kn">r=16 / α=32</span></td><td>分割 LoRA</td><td>旁路秩与缩放;B 零初始化起步恒等</td></tr>
     <tr><td><span class="kn">6×6×30</span> / <span class="kn">≥50</span></td><td>对齐</td><td>角点分 6×6 网格、每格取最强 30 个(基准/待测任一侧 &lt;50 个即失败);内点 ≥50 才算成功(阈值从严,防偶然凑对)</td></tr>
     <tr><td><span class="kn">20260927</span>(seed)/ <span class="kn">8300</span></td><td>全局</td><td>固定随机种子(可复现)/ 监控网页端口</td></tr>
     <tr><td><span class="kn">3 份</span></td><td>会话管理</td><td>.tmp 归档保留最近 3 份;models/ 每次清空重来</td></tr>
     <tr><td><span class="kn">100</span> 步</td><td>采样图</td><td>每 100 训练步存一张(红框标缺陷真实位置)</td></tr>
-    <tr><td><span class="kn">quality_score</span></td><td>best 选型(新版)</td><td>综合质量分 = 命中数×1000 + 总交集 − 0.1×标注外误报像素;创新高才当 best(同分比检出数、总交集)</td></tr>
+    <tr><td><span class="kn">quality_score</span></td><td>best 选型</td><td>综合质量分 = 命中数×3000 + 总交集 − 0.05×标注外误报像素;创新高才当 best(同分比检出数、总交集)</td></tr>
     <tr><td><span class="kn">128px</span> ramp</td><td>考试权重窗</td><td>重叠带内窗重线性此消彼长、和恒为 1,热力图无块缝</td></tr>
-    <tr><td><span class="kn">实测贴边率 / 孔心</span></td><td>智能放置</td><td>贴边概率 = 实测边界比例夹 [0.30, 0.65],其余停区内开阔处;整孔缺陷对准孔心附近(≥0.50·d_max);锚点质心严格区内</td></tr>
-    <tr><td><span class="kn">10px / 35% / 70%</span></td><td>落地门槛</td><td>区内正样本至少 10px;贴边落点(区内最近距离 ≤2.5px)≥35% 入区,内部落点 ≥70% 入区</td></tr>
-    <tr><td><span class="kn">0.5x / 65:35 / 区内截断</span></td><td>残差泊松</td><td>增益减半居中 128 求解再 ×2;残差 = 65% 泊松 + 35% 源;融合权重严格乘检测区掩码,区外零落笔 + 深孔门控压亮斑</td></tr>
-    <tr><td><span class="kn">实测区间 · 0.5~3.0×</span></td><td>对比度合成</td><td>目标幅度取实测 [diff_lo, diff_hi](p10×0.8 夹 16~42 / p90×1.15 夹 55~195,默认 25~135);保持原生极性,残差按 p75 定向缩放限幅 0.5~3.0×</td></tr>
+    <tr><td><span class="kn">Q_synth</span></td><td>合成配额</td><td>clip(⌈Σ(E÷D)÷5⌉, 60, 600)——由阶段 3 贴图需求同源导出,小区保底 60、大区封顶 600</td></tr>
+    <tr><td><span class="kn">五五分落位</span></td><td>贴图放置</td><td>50% 区边缘模式(掩码随机点对准边界线,越出截断)/ 50% 区内模式(对准质心,完整入区)</td></tr>
+    <tr><td><span class="kn">8px / 15% / 70%</span></td><td>落地门槛</td><td>区内正样本至少 8px;区边缘落位 ≥15% 入区,区内落位 ≥70% 入区</td></tr>
+    <tr><td><span class="kn">0.5x / 50:50 / 零光晕</span></td><td>残差泊松</td><td>增益减半居中 128 求解再 ×2;残差 = 50% 泊松 + 50% 源;落笔严格在标签∩区内(label=0 恒 0),越界按 30/40/30 + 深孔门控</td></tr>
+    <tr><td><span class="kn">中位锚定 · 0.5~6.0×</span></td><td>对比度合成</td><td>目标幅度按 [diff_lo, diff_med, diff_hi] 中位锚定;保持实测极性,残差按 p50+p75 定向缩放限幅 0.5~6.0</td></tr>
     <tr><td><span class="kn">3 张 / 49MB</span></td><td>监控页热力图缓存</td><td>全分辨率热力图内存缓存 3 张;改阈值只重画不重推</td></tr>
-    <tr><td><span class="kn">0.70~1.30 / 70%</span></td><td>规格复检</td><td>标签整体面积(含跨界部分)0.70~1.30 倍实测 [min, max];小孔可按整孔覆盖 ≥70% 兜底(区内 ≥0.65·min)</td></tr>
-    <tr><td><span class="kn">⚡ 五类增量缓存</span></td><td>全链路复跑</td><td>体检/对齐/归属/配额/净化按指纹缓存跨会话保留——素材没改,阶段 1~5.1 秒级跳过,直接进分割训练</td></tr>
+    <tr><td><span class="kn">⚡ 开局指纹检测</span></td><td>全链路复跑(prep_plan)</td><td>四环节(对齐按点位/真实小图全局/LoRA与合成按 区,缺陷)开局一次判定;没变秒跳,合成可留旧补差;前置全部成功才归档旧 models</td></tr>
   </table>
   </div>
 
   <div class="co story">
     <span class="tag">📖 一分钟复盘整个故事</span>
-    <p><b>备料四件事</b>(预训练基座、原图+标注、val/ 考卷、分区蒙版——零素材零配置)→ <b>体检</b>(每类缺陷 ≥4 实例,不合格大声退出)→ <b>对齐</b>(全图搬回基准坐标系,增量缓存)→ <b>抠真图</b>(分区自动归属,原图零失真抠 real_patches + 实测规格)→ <b>造素材</b>(内置 FLUX LoRA 按配额量产 synth_cache,双阈值差分抠取)→ <b>分卷配额</b>(8:2 训练/早停,均衡池正负 1:1)→ <b>净化底图</b>(.clean.png)→ 每轮<b>在线造题</b>(双源抽素材、中位锚定缩放、智能落锚、残差泊松严格区内落笔、三道复检、打 1/0/255 标签)喂给<b>冻结前段+LoRA+新头</b>的模型(Focal+Dice,EMA)→ <b>val_loss 早停</b> + <b>考卷综合质量分选 best</b>(命中×1000 + 交集 − 0.1×误报)→ 交付 <b>best 权重 + deploy/ 推理包</b>。全程监控页 8300 围观,一条命令到底;素材没改时 1~5.1 全部 ⚡ 秒跳。</p>
+    <p><b>备料四件事</b>(预训练基座、原图+标注、val/ 考卷、分区蒙版——零素材零配置)→ <b>体检 + 开局指纹检测</b>(每个 (检测区,缺陷) ≥4,不合格大声退出;没变的前置秒级跳过)→ <b>逆向精对齐</b>(照片不动,分区投射 + ±10px 吸附成"有效检测区":训练紧贴版 / 推理圆滑版)→ <b>抠真图</b>(圆滑区归属,原图零失真抠 real_* + 实测规格)→ <b>阶段 1/2</b>(每组合一支专属 LoRA,按统一预算配额量产 synth_*,双阈值差分抠取)→ <b>统一注水预算</b>(√(T×D) 配额、正负 1:1、无放回牌靴)→ 每轮<b>在线造题</b>(原图干净切块跳脏块、五五分落位、零光晕泊松、入区+可见性复检、打 1/0/255 标签)喂给<b>冻结前段+LoRA+新头</b>的模型(Focal+Dice,EMA)→ <b>val_loss 早停</b>(练满 max(8,分片) 后 4 轮不降)+ <b>考卷综合质量分选 best</b>(命中×3000 + 交集 − 0.05×误报,圆滑区、原图直考)→ 交付 <b>best 权重 + deploy/ 推理包</b>。全程监控页 8300 围观,一条命令到底;素材没改时前置环节全部 ⚡ 秒跳。</p>
     <p>与《synth_assets 图解手册》首尾相接:兵工厂量产素材 → 驾校拿素材教出模型。两本手册合起来,就是"工业缺陷分割"从素材到模型的完整白话之旅。</p>
   </div>
 </section>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>模型推理现场试用期闭环流程</title>
+<style>
+  :root{
+    --ink:#1f2430; --sub:#5a6274; --line:#dfe3ec; --bg:#f7f8fb; --card:#ffffff;
+    --accent:#0f5bb5; --warn:#a05a00; --ok:#0d7a4f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+       font-family:"Microsoft YaHei","PingFang SC","Segoe UI",system-ui,sans-serif;
+       font-size:15px;line-height:1.75}
+  .wrap{max-width:1400px;margin:0 auto;padding:28px 32px 64px}
+  h1{font-size:26px;margin:8px 0 4px;letter-spacing:.5px}
+  h2{font-size:19px;margin:40px 0 12px;padding-left:12px;border-left:4px solid var(--accent)}
+  .lead{color:var(--sub);margin:0 0 6px}
+  .meta{color:var(--sub);font-size:13px;margin-bottom:18px}
+  .meta a{color:var(--accent);text-decoration:none}
+  table{border-collapse:collapse;width:100%;background:var(--card);font-size:14px;
+        border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{border-bottom:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+  th{background:#eef2f9;font-weight:600;white-space:nowrap}
+  tr:last-child td{border-bottom:none}
+  code{background:#eef1f6;border:1px solid #e2e6ef;border-radius:4px;
+       padding:1px 6px;font-family:Consolas,"Courier New",monospace;font-size:13px}
+  .frame{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card);
+         margin-top:14px;box-shadow:0 1px 4px rgba(15,30,60,.06)}
+  .frame iframe{display:block;width:100%;height:880px;border:0}
+  .frame .cap{padding:8px 14px;font-size:13px;color:var(--sub);border-top:1px solid var(--line);background:#fbfcfe;
+              display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .frame .cap .cap-text{flex:1}
+  .cap button{flex:none;border:1px solid var(--accent);background:#fff;color:var(--accent);
+              border-radius:6px;padding:3px 14px;font-size:13px;cursor:pointer;font-family:inherit}
+  .cap button:hover{background:var(--accent);color:#fff}
+  .frame:fullscreen{display:flex;flex-direction:column;border-radius:0;background:#fff}
+  .frame:fullscreen iframe{flex:1;height:auto;min-height:0}
+  .frame:fullscreen .cap{border-top:1px solid var(--line)}
+  .frame:-webkit-full-screen{display:flex;flex-direction:column;border-radius:0;background:#fff}
+  .frame:-webkit-full-screen iframe{flex:1;height:auto;min-height:0}
+  .stages{counter-reset:stage;list-style:none;padding:0;margin:10px 0 0}
+  .stages li{counter-increment:stage;position:relative;background:var(--card);
+             border:1px solid var(--line);border-radius:8px;padding:12px 16px 12px 64px;margin-bottom:10px}
+  .stages li::before{content:counter(stage);position:absolute;left:14px;top:50%;transform:translateY(-50%);
+             width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;
+             display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700}
+  .stages b{display:block;margin-bottom:2px;font-size:15.5px}
+  .stages p{margin:0;color:#3a4152;font-size:14px}
+  .tips{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:14px;margin-top:6px}
+  .tip{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);
+       border-radius:8px;padding:12px 16px}
+  .tip.warn{border-left-color:var(--warn)}
+  .tip b{display:block;margin-bottom:4px;font-size:15px}
+  .tip p{margin:0;color:#3a4152;font-size:14px}
+  .foot{margin-top:48px;color:var(--sub);font-size:12.5px;border-top:1px solid var(--line);padding-top:14px}
+  @media (max-width:900px){.wrap{padding:18px 14px 40px}.frame iframe{height:640px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>模型推理现场试用期闭环流程</h1>
+<p class="lead">发布上线 → 前期研发采集 NG 重标训练 → 相对稳定后业务标注误报/漏报 → 回流入池精调 → 考卷择优再发布，循环迭代直至指标达标转正式运行。</p>
+<p class="meta">涉及工程：<b>supervised_apps/train</b>（训练引擎）· <b>vision-ai-inference-v2</b>（推理服务）· <b>误报/漏报标记工具</b>（业务标注）。
+流程图源文件 <a href="archify_field_trial_loop.json">archify_field_trial_loop.json</a> · 可<a href="archify_field_trial_loop.html">独立打开完整交互图</a>。</p>
+
+<h2>一、闭环流程全景图</h2>
+<div class="frame">
+  <iframe src="archify_field_trial_loop.html" title="模型推理现场试用期闭环流程图"></iframe>
+  <div class="cap">
+    <span class="cap-text">archify 交互图，顶部阶段带划分试用时间轴：① 上线准备 → ② 前期·研发重标 → ③ 稳定后·业务标注；主循环按<b>顺时针</b>阅读：上排发布与推理 → 右侧两阶段标注 → 研发/业务标注回流垂降入池 → 下排自右向左"入池 → 精调 → 择优" → 再发布回到起点；例外泳道为回滚与转正出口。</span>
+    <button id="btn-fullscreen" type="button" title="将流程图铺满屏幕（Esc 退出）">⛶ 全屏</button>
+  </div>
+</div>
+
+<h2>二、后续工作规划大方向</h2>
+<ol class="stages">
+  <li>
+    <b>上线准备</b>
+    <p>训练交付 <code>models/{产品}/</code> → <code>preflight</code> 体检通过 → 整目录拷入推理服务（mtime 热更新，不重启）→ <code>/detect</code> 开跑，业务复核同步观察。</p>
+  </li>
+  <li>
+    <b>前期 · 研发主导积累</b>
+    <p>研发人员按批采集<b>现场 NG</b>（复检确认的真实缺陷）与<b>系统 NG</b>（系统判定 NG，含误报）原图重标注：真缺陷标 NG、误报确认为 OK 负样本，入池精调重训、考卷择优后再发布，循环收敛；<b>重标同时跟踪当前检测准确性</b>（每批系统 NG 的误报占比、真实缺陷检出情况）——这既是收敛信号，也是切换业务标注的依据。</p>
+  </li>
+  <li>
+    <b>相对稳定后 · 业务接管标注</b>
+    <p>误报/漏报率波动收敛、新增缺陷类型趋零即切换：业务人员复核 NG 逐件、OK 抽检，用标记工具在结果图上标注误报/漏报，走同一回流管线；研发转为入池质检与转化脚本维护。</p>
+  </li>
+  <li>
+    <b>转正运行</b>
+    <p>误报率、漏报率、服务指标连续达标 → 转正式运行，人工复核降为低比例抽检；期间任何新版表现异常，旧版模型目录重拷即可分钟级回滚。</p>
+  </li>
+</ol>
+
+<h2>三、标注回流转化规则</h2>
+<table>
+  <tr><th>标注类型</th><th>处置</th><th>落点（train 工程）</th></tr>
+  <tr><td><b>漏报缺陷</b></td><td>新 NG 样本，部分抽作考卷</td><td>训练池 <code>*.bmp + .bmp.tmp</code>；抽部分进 <code>val/</code> 独立考卷</td></tr>
+  <tr><td><b>散发随机误报</b></td><td>OK 负样本</td><td>无 <code>.tmp</code> 入训练池</td></tr>
+  <tr><td><b>微小噪点误报</b></td><td>先运维过滤再回流</td><td>调 <code>MIN_DEFECT_DIAMETER_MM</code>（默认 0.5mm），无效再入池</td></tr>
+</table>
+<p>两阶段同规则：前期系统 NG 复核同样按上表执行（真缺陷→漏报行，误报→对应误报行），仅执行人为研发。</p>
+
+<h2>四、关键纪律</h2>
+<div class="tips">
+  <div class="tip">
+    <b>两阶段切换</b>
+    <p>切换看收敛信号（连续若干批误报/漏报率收敛、考卷结果稳定）；切换后研发仍负责转化入池的坐标/格式质检，业务只管看图标注。</p>
+  </div>
+  <div class="tip warn">
+    <b>阈值与回流契约</b>
+    <p>线上坚持 manifest 0.5 阈值不现场调参；标注必须在原图坐标系、分辨率一致、每类 ≥4 实例（不足用 <code>--reuse</code>），转 <code>.bmp.tmp</code> 尽早脚本化。</p>
+  </div>
+  <div class="tip">
+    <b>只升不降 · 可回滚</b>
+    <p>新版 quality_score 对比线上版只升不降才发布；<code>SUPERVISED_CKPT_DIR</code> 侧按 <code>{产品}_vN_bak</code> 归档旧版，重拷即回滚。拷贝不得保留源 mtime。</p>
+  </div>
+  <div class="tip ok">
+    <b>度量与转正</b>
+    <p>全程记录误报率（NG 判定占比）、漏报率（OK 抽检占比）、lock_ms 与告警；建立版本台账（数据范围 + 发布时间 + 指标基线）支撑归因与回滚决策。</p>
+  </div>
+</div>
+
+<h2>五、让流程跑起来：待开发与待统计清单</h2>
+
+<h3>开发类缺口</h3>
+<table>
+  <tr><th>缺口</th><th>说明</th><th>优先级</th></tr>
+  <tr><td><b>标注回流转换脚本</b></td><td>标记工具输出 / 研发重标结果 → <code>datasets/{产品}/{点位}/</code> 的 <code>*.bmp + *.bmp.tmp</code>（原图坐标系、多边形格式、分辨率校验、每类 ≥4 实例、增量入池）。当前完全缺失，人工转换最易出错</td><td><b>P0</b></td></tr>
+  <tr><td><b>发布 / 回滚流水线脚本</b></td><td>preflight → 整目录拷入 → 旧版转 <code>{产品}_vN_bak</code> 归档 → 台账追加；回滚 = 重拷旧版。目前全为手工步骤，"拷贝不得保留 mtime"等细节需固化进脚本</td><td><b>P0</b></td></tr>
+  <tr><td><b>现场环境准备</b></td><td>GPU 服务器部署推理服务、HALCON license、<code>{CALIB_DIR}</code> 相机内外参现场示教标定、<code>SUPERVISED_CKPT_DIR</code> 目录与归档约定</td><td><b>P0</b></td></tr>
+  <tr><td>研发采集工具适配</td><td><code>fetch_ng_by_qr.py</code> 已能按扫码批量拉系统 NG 源图，需适配为"按点位落监督训练池目录"；现场 NG 图另设人工归集入口</td><td>P1</td></tr>
+  <tr><td>研发重标工具</td><td>对系统 NG 整图定性（真缺陷画框、误报确认 OK）；最好带当前模型预测叠加显示的半自动模式，并统一研发/业务两侧的 <code>.bmp.tmp</code> 标注格式</td><td>P1</td></tr>
+  <tr><td>服务侧统计接口（可选）</td><td>判定记录已落产线 DB，统计可走 DB 侧；如需服务端直接看 lock_ms / 判定分布 / 告警次数，加轻量 <code>/stats</code> 接口</td><td>P2</td></tr>
+</table>
+
+<h3>统计类工作</h3>
+<table>
+  <tr><th>工作</th><th>说明</th><th>优先级</th></tr>
+  <tr><td><b>误报 / 漏报统计口径与报表</b></td><td>定义分子分母（按件 / 按点位 / 按缺陷类型），数据源 = 复核标注记录 + DB 判定记录，产出按日 / 按批报表；漏报依赖 OK 件抽检，抽检比例需先定</td><td><b>P0</b></td></tr>
+  <tr><td>准确性跟踪批报告</td><td>将 <code>eval.py</code> qr 验收适配新 ckpt 布局（<code>models/{产品}/</code>），每批回流后出"DB 判定 vs 当前模型检出"对照报告——对应图中"重标+跟踪准确性"</td><td>P1</td></tr>
+  <tr><td>版本台账</td><td>每版模型记录权重名、quality_score、训练数据批次、发布时间、当期误报/漏报基线、preflight 结果；由 release 脚本自动追加，支撑只升不降与回滚归因</td><td>P1</td></tr>
+  <tr><td>收敛判据量化</td><td>把"相对稳定"写成数字（如连续 N 批误报率波动 &lt; X%、新增缺陷类型为 0、考卷增幅收敛），作为切换业务标注的开关条件</td><td>P2</td></tr>
+  <tr><td>转正评审数据包</td><td>试用期周报 + 转正评审三指标汇总（误报率、漏报率、服务指标），从报表与台账汇总</td><td>P2</td></tr>
+</table>
+
+<div class="tip">
+  <b>可直接复用 · 不用新做</b>
+  <p>train 增量缓存（按批回流只处理新增图）；inference-v2 的 preflight + 热更新（缺的只是脚本化）；<code>eval.py</code> qr 验收与阈值扫描（仅需适配新模型布局）；产线 DB 记录链路（ai_check_records 及审核字段）。<b>最短路径 = 回流转换脚本 + 发布/回滚脚本 + 现场环境 + 误报漏报报表四件事</b>，其余边跑边补。</p>
+</div>
+
+<p class="foot">
+文档与流程图更新于 2026-10-22 · 流程图规格 <a href="archify_field_trial_loop.json">archify_field_trial_loop.json</a>（showcase 校验 9/9 通过）·
+交互图 <a href="archify_field_trial_loop.html">archify_field_trial_loop.html</a>（浏览器视口检查通过）。
+</p>
+
+</div>
+<script>
+(function () {
+  var frame = document.querySelector('.frame');
+  var btn = document.getElementById('btn-fullscreen');
+  if (!frame || !btn) return;
+  var supported = frame.requestFullscreen || frame.webkitRequestFullscreen;
+  if (!supported) { btn.disabled = true; btn.title = '当前浏览器不支持全屏'; return; }
+  btn.addEventListener('click', function () {
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    } else {
+      (frame.requestFullscreen || frame.webkitRequestFullscreen).call(frame)
+        .catch(function () { btn.disabled = true; btn.title = '全屏被浏览器拒绝，可独立打开交互图'; });
+    }
+  });
+  function sync() {
+    var on = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    btn.textContent = on ? '退出全屏 (Esc)' : '⛶ 全屏';
+  }
+  document.addEventListener('fullscreenchange', sync);
+  document.addEventListener('webkitfullscreenchange', sync);
+})();
+</script>
+</body>
+</html>

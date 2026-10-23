@@ -36,6 +36,7 @@ from exam import run_exam, save_best
 from io_utils import read_gray
 from loss import seg_loss
 from patches import DefectPatch, extract_patches
+from runtime_state import Monitor
 from zones import PointMat, effective_zones, scan_point, zone_defect_map
 from align import OrbAligner
 
@@ -93,7 +94,18 @@ def main():
     device = pick_device(cfg)
     amp = pick_amp(cfg, device)
     ts = int(cfg.tile_size)
-    log(f"配置: tile={ts} batch={cfg.batch_size} device={device} amp={amp} seed={cfg.seed}")
+    mon = Monitor(args.product, {"tile_size": ts, "batch_size": cfg.batch_size,
+                                 "epochs": cfg.epochs, "device": str(device),
+                                 "amp": amp, "seed": cfg.seed})
+
+    def emit(msg: str):
+        """控制台 log + 监控状态文件双写(web.py 据此渲染事件线)。"""
+        log(msg)
+        mon.event(msg)
+
+    emit(f"配置: tile={ts} batch={cfg.batch_size} device={device} amp={amp} seed={cfg.seed}")
+    emit(f"监控: 另开终端 python web.py --product {args.product} → "
+         f"http://127.0.0.1:{cfg.web_port}")
 
     # ---- 0 体检+索引 ----
     prod_root = os.path.join(cfg.data_dir, args.product)
@@ -104,8 +116,8 @@ def main():
                             if os.path.isdir(os.path.join(prod_root, d))
                             and not d.startswith(".") and d not in ("val", "assets")]
     total_val = sum(len(m.val_paths) for m in mats)
-    log(f"0.体检: {len(mats)} 个点位, 训练池 {sum(len(m.train_paths) for m in mats)} 张, "
-        f"独立考卷 {total_val} 张")
+    emit(f"0.体检: {len(mats)} 个点位, 训练池 {sum(len(m.train_paths) for m in mats)} 张, "
+         f"独立考卷 {total_val} 张")
 
     # ---- 1 逆向对齐 + 分区投影;2 真实缺陷小图 ----
     patches: List[DefectPatch] = []
@@ -121,10 +133,10 @@ def main():
                 patches.extend(extract_patches(p, gray, eff))
     if not patches:
         raise SystemExit("未抽到任何真实缺陷小图(检查 .tmp 标注与分区归属)")
-    log(f"1.对齐+投影: {len(eff_by_img)} 张图; 2.真实缺陷小图: {len(patches)} 个")
+    emit(f"1.对齐+投影: {len(eff_by_img)} 张图; 2.真实缺陷小图: {len(patches)} 个")
 
     zdef = zone_defect_map(mats, eff_by_img)
-    log(f"   分区↔缺陷归属: {json.dumps(zdef, ensure_ascii=False)}")
+    emit(f"   分区↔缺陷归属: {json.dumps(zdef, ensure_ascii=False)}")
 
     # ---- 3 干净切块(训练池 8:2) ----
     all_tiles = []
@@ -137,12 +149,12 @@ def main():
     val_tiles, train_tiles = all_tiles[:n_val], all_tiles[n_val:]
     if not train_tiles:
         raise SystemExit("干净块池为空(标注覆盖全图?)")
-    log(f"3.切块: 干净块 {len(all_tiles)}(训练 {len(train_tiles)} / 早停验证 {len(val_tiles)})")
+    emit(f"3.切块: 干净块 {len(all_tiles)}(训练 {len(train_tiles)} / 早停验证 {len(val_tiles)})")
 
     # ---- 4 在线贴图训练 ----
     net = model_mod.build_model(ts).to(device)
     n_params = sum(p_.numel() for p_ in net.parameters())
-    log(f"4.TinyUNet 参数 {n_params/1e6:.2f}M")
+    emit(f"4.TinyUNet 参数 {n_params/1e6:.2f}M")
     train_ds = OnlinePasteDataset(train_tiles, patches, seed=cfg.seed + 1,
                                   dilate_min=cfg.paste_dilate_min,
                                   dilate_max=cfg.paste_dilate_max)
@@ -175,19 +187,27 @@ def main():
             scaler.update()
             running.append(loss.item())
         vl = val_loss(net, val_set, device)
-        log(f"4.epoch {epoch:02d}: train_loss={np.mean(running):.4f} val_loss={vl:.4f}")
+        emit(f"4.epoch {epoch:02d}: train_loss={np.mean(running):.4f} val_loss={vl:.4f}")
+        rec = {"epoch": epoch,
+               "train_loss": round(float(np.mean(running)), 4),
+               "val_loss": round(vl, 4)}
 
         if total_val > 0:
             res = run_exam(net, mats, eff_by_img, ts, device)
-            log(f"5.考试 ep{epoch:02d}: 交集={res['total']} 检出={res['hit_defects']}/"
-                f"{res['total_defects']} 报警面积={res['alarm']} "
-                f"quality={res['quality_score']}")
+            emit(f"5.考试 ep{epoch:02d}: 交集={res['total']} 检出={res['hit_defects']}/"
+                 f"{res['total_defects']} 报警面积={res['alarm']} "
+                 f"quality={res['quality_score']}")
+            rec.update(inter=res["total"], hit=res["hit_defects"],
+                       hit_total=res["total_defects"], alarm=res["alarm"],
+                       quality=res["quality_score"])
             name = save_best(cfg.models_dir, args.product, res, epoch, net,
                              mats, zdef, ts, best_prev)
             if name:
                 best_prev = (res["quality_score"], res["hit_defects"], res["total"])
                 best_name = name
-                log(f"5.★ best 刷新: {name}")
+                mon.best(name, res["quality_score"])
+                emit(f"5.★ best 刷新: {name}")
+        mon.epoch(rec)
         if epoch >= cfg.min_epochs:
             if vl >= last_vl - 1e-4:
                 no_gain += 1
@@ -198,9 +218,10 @@ def main():
                 break
         last_vl = vl
 
-    log(f"训练结束({stop_reason}) best={best_name or '无(总交集恒0,请检查数据/标注)'}")
-    log(f"交付目录: {os.path.join(cfg.models_dir, args.product)} → 拷入 infer_lite 的 "
-        f"{{SUPERVISED_CKPT_DIR}}/{{产品}}/ 即可服务")
+    emit(f"训练结束({stop_reason}) best={best_name or '无(总交集恒0,请检查数据/标注)'}")
+    emit(f"交付目录: {os.path.join(cfg.models_dir, args.product)} → 拷入 infer_lite 的 "
+         f"{{SUPERVISED_CKPT_DIR}}/{{产品}}/ 即可服务")
+    mon.finish(stop_reason)
 
 
 if __name__ == "__main__":

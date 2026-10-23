@@ -29,6 +29,7 @@ class AppConfig:
     device: str = "auto"          # auto=cuda(可用时)否则 cpu
     data_dir: str = "datasets"    # datasets/{产品}/{点位}/
     models_dir: str = "models"    # models/{产品}/best_*.pth + deploy/
+    web_port: int = 8301          # 监控页端口(web.py;真工程同名字段为 8300)
     val_ratio: float = 0.2        # 训练池 8:2 切早停验证(固定种子)
     paste_dilate_min: int = 5     # 泊松克隆前掩码外扩 px(盖过 OpenCV 内部 4px 腐蚀)
     paste_dilate_max: int = 7

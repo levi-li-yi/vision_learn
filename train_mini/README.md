@@ -43,6 +43,16 @@ python main.py --product HT12
 # → 整目录拷入 infer_lite 的 {SUPERVISED_CKPT_DIR}/HT12/ 即可 POST /detect
 ```
 
+训练观测:控制台日志之外,另有零依赖监控页(真工程 8300 监控 web 的同构缩影)——
+训练进程把事件线与逐轮指标原子写 `.tmp/{产品}/web/state.json`(runtime_state.py),
+`web.py` 常驻读该文件渲染;两进程零耦合,先后启动都行,训练结束后页面仍可回看。
+
+```
+python web.py --product HT12          # 另开终端 → http://127.0.0.1:8301
+# 逐轮 train/val loss 与考卷 quality_score 曲线 + 事件线 + best/早停状态,2s 自动刷新
+# 内网观看加 --host 0.0.0.0;端口可 --port 或 config 的 web_port 改
+```
+
 依赖:`torch / opencv-python / numpy / Pillow`(无 halcon、无 FLUX、无 diffusers)。
 配置见 `config/app_config.jsonc`(tile 256 / batch 4 / 早停参数与真工程同口径)。
 
@@ -50,6 +60,7 @@ python main.py --product HT12
 
 1. 无 FLUX 生成 → 泊松贴图(旧方案回归):学习目标是"缺陷扩增要有边缘自然感",两条路都成立;
 2. 无 ±10px 吸附/圆滑 → 投影分区直用:真工程"有效检测区"是精度增强,架构位与本工程相同;
-3. 无增量缓存/骑缝补块/面积配额/EMA/DDP/监控 web:事件线与口径不变,工程化增强从简;
+3. 无增量缓存/骑缝补块/面积配额/EMA/DDP:事件线与口径不变,工程化增强从简;
+   监控 web 为零依赖轻量版(state 文件 + 曲线/事件线渲染;无 NG 热力图、整图按需推理、训练子进程管理);
 4. 对齐用 OpenCV(x,y 口径直连)替代 Halcon(row,col+交换):免 license,思想同构;
 5. .tmp 标注解析/分区 json/RLE/网格/帐篷窗/0.5 阈值/quality_score 公式与真工程**逐字一致**。

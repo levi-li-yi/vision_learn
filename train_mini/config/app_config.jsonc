@@ -28,6 +28,9 @@
   "data_dir": "datasets",
   "models_dir": "models",
 
+  // 监控 web 端口(python web.py --product {产品};真工程同名字段为 8300)
+  "web_port": 8301,
+
   // 训练池 8:2 早停验证划分(固定种子)
   "val_ratio": 0.2,
 

@@ -20,16 +20,22 @@ import torch
 # ---------------------------------------------------------------------------
 
 def manual_quadratic_grad(x: float) -> float:
-    """d(x^2)/dx = 2x —— 课本公式。"""
+    """d(x^2)/dx = 2x —— 课本公式；作为标准答案，与 autograd 结果对拍。"""
+    # 把 x 想成旋钮、y=x² 是效果：梯度的正负 = 往哪拧（为正就反向调小 x），
+    # 绝对值 = 拧多少（离最低点 x=0 越远步子越大，越近自然收小）。
     return 2.0 * x
 
 
 def autograd_quadratic_grad(x: float) -> float:
-    """让 PyTorch 自己算：requires_grad=True 声明"要跟踪对它的求导"。"""
+    """让 PyTorch 自己算（不给公式）：贴标签→前向记账→反向查表拼梯度，与手算版对拍。"""
+    # requires_grad=True 相当于给数字贴"求导标签"：此后它参与的运算都会被记账。
     t = torch.tensor(float(x), requires_grad=True)
-    y = t ** 2          # 前向：记录计算图
-    y.backward()        # 反向：从 y 一路算回 t 的梯度
-    return t.grad.item()
+    y = t ** 2          # 前向：算出数值，同时记下"y 由 t 平方而来"（撒面包屑）
+    y.backward()        # 反向：并非"自己推"公式——是查工程师预写好的求导规则表
+    # 公式来源三层：①导数定理=数学家证的；②每个小操作的反向规则=PyTorch 工程师
+    # 手写进 derivatives.yaml 求导表（pow 条目 exponent*self^(exponent-1)，代回即 2t）；
+    # ③整个网络的复合公式没人写过——backward() 运行时查表+链式法则现场拼装。
+    return t.grad.item()  # .grad 装着梯度张量，.item() 取出里面的普通小数
 
 
 # ---------------------------------------------------------------------------

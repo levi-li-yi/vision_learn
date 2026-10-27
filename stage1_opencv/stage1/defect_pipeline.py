@@ -23,11 +23,20 @@ from stage1.connected_components import components_report
 # ---------------------------------------------------------------------------
 
 def make_metal_background(w=200, h=150, seed=0) -> np.ndarray:
-    """拉丝金属质感：随机噪声 + 水平方向模糊（拉丝纹理）。"""
-    rng = np.random.default_rng(seed)
+    """拉丝金属质感：随机噪声 + 水平方向模糊（拉丝纹理）。
+
+    Demo B 的舞台布景：给规则流水线造一块带纹理干扰的底图（纯灰背景
+    考不出 Otsu/连通域的本事）。工序：正态噪声当金属颗粒底子 -> 9x1
+    均值模糊横向拖平 -> 水平细丝。同 seed 同一块皮（伪随机搅拌机）。
+    """
+    rng = np.random.default_rng(seed)     # 私有骰子：同 seed 重放同一块金属皮
     img = rng.normal(128, 5, size=(h, w)).astype(np.float32)
+    # ↑ 颗粒底子：每像素抽 N(128, 5)——128 中灰给暗缺陷留对比空间，±5 细腻
+    #   不脏；先住 float 房间，下一步取平均不能丢小数
+    # 点睛：均值模糊窗口 (宽9, 高1)——横向 9 像素取平均、纵向完全不动，
+    # 颗粒拖成水平细丝（真实拉丝 = 砂带同向划痕）；ksize 是 (w,h) 顺序勿写反
     img = cv2.blur(img, (9, 1))                               # 横向拖出丝状纹理
-    return np.clip(img, 0, 255).astype(np.uint8)
+    return np.clip(img, 0, 255).astype(np.uint8)   # 保险带夹 0~255 交回 uint8（噪声底纹不必 round）
 
 
 def plant_defects(image: np.ndarray, seed=1):
@@ -79,33 +88,58 @@ def make_region_mask(shape) -> np.ndarray:
 def classical_detect(image: np.ndarray, min_area: int = 30, blur_k: int = 5):
     """灰度 -> 高斯模糊 -> 反相 Otsu -> 闭运算 -> 面积过滤 -> 组件表。
 
-    反相（THRESH_BINARY_INV）：缺陷比背景暗，反相后缺陷=白、背景=黑，
-    后续形态学/连通域一律在"白=目标"的约定下做。
+    Demo B 的考生（与仓库 core/utils.py::test 后处理链同构）。全链条
+    固定规则：干净数据好使，灰度多变/纹理复杂时误检漏检不可兼得——
+    这正是上深度学习的动机。反相（THRESH_BINARY_INV）：缺陷比背景暗，
+    反相后缺陷=白、背景=黑，后续形态学/连通域一律在"白=目标"下做。
     """
     gray = image if image.ndim == 2 else cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    smooth = cv2.GaussianBlur(gray, (blur_k, blur_k), 0)
+    # ↑ 格式统一：灰度直接用，彩图转灰，后面只认单通道
+    smooth = cv2.GaussianBlur(gray, (blur_k, blur_k), 0)   # 洗噪：颗粒纹/小噪点被邻居平均掉
+    # 心脏：反相 Otsu 二值化——OTSU 看灰度直方图自动找门槛（背景~128 与
+    # 缺陷 45~55 两群之间的谷底）；INV 反相让"暗缺陷变白"，合"白=目标"
+    # 行规。传入阈值 0 被 OTSU 无视；返回的第一个值（自动门槛）用 _ 丢弃
     _, binary = cv2.threshold(smooth, 0, 255,
                               cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))   # 造刷子：3x3 椭圆印章
+    # 闭运算 = 先膨胀后腐蚀：白块先胖一圈焊断口/填小洞，再瘦回原尺寸——
+    # 细划痕被二值化切碎时靠它焊拢（仓库真实链路用 15x15 大刷子）
     closed = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
+    # 交卷：components_report 给每块白斑编号、算外接框/面积/质心，面积
+    # < min_area 的除名；二值图一并返回，留给演示入口做 region 门控
     return components_report(closed, min_area=min_area), closed
 
 
 def region_gate(binary_mask: np.ndarray, region: np.ndarray) -> np.ndarray:
     """region 门控：mask AND region（>0 二值化语义与仓库一致）。
 
+    位置门禁：规则流水线只会问"像不像缺陷"（够暗、够大），分不清
+    "在哪"——装夹区污渍/正常结构灰度上长得像，就会混成假阳。拿工艺
+    蒙版当审批表逐格盖章：检出 AND 区内才保留，区外一票否决——
+    "先圈定哪里算数，再看像不像缺陷"。与 blending.cut_paste 的
+    allowed 收敛同一机制，numpy 布尔方言（>0 即归一，天然兼容非
+    0/255 输入；结果与 cv2.bitwise_and 逐位等价）。
     仓库原文：服务端裁 region 再 >0 得二值包络，与预测做 AND，
     抑制'待检表面外'假阳。
     """
+    # 五截拆解：>0 把两份各归一成 True/False -> & 逐格"检出且区内才留"
+    # （region 一票否决）-> astype 变 1/0 -> *255 抬回标准 0/255 二值
     return ((binary_mask > 0) & (region > 0)).astype(np.uint8) * 255
 
 
 def hit(gt_mask: np.ndarray, comp, tol: int = 3) -> bool:
-    """组件质心是否落在某条 GT 缺陷上（tol 容差圈）。"""
-    cy, cx = int(round(comp["cy"])), int(round(comp["cx"]))
+    """组件质心是否落在某条 GT 缺陷上（tol 容差圈）。
+
+    阅卷人：判"检出是真命中还是假阳"——质心周围开 (2*tol+1) 见方的
+    容差窗，窗内见到 GT 缺陷像素即命中。教学简化：只判位置，不判
+    形状/大小；工业标准是 IoU（预测与 GT 的交/并 >= 阈值才 TP）。
+    """
+    cy, cx = int(round(comp["cy"])), int(round(comp["cx"]))   # 质心取整当数组下标（cy 行 cx 列）
+    # 容差窗的行/列范围：max(0,..) 防负下标——numpy 负索引会从图末尾倒着数，
+    # 悄悄判错；+1 补切片"含头不含尾"的缺；min(..,图边) 防越界
     y0, y1 = max(0, cy - tol), min(gt_mask.shape[0], cy + tol + 1)
     x0, x1 = max(0, cx - tol), min(gt_mask.shape[1], cx + tol + 1)
-    return bool((gt_mask[y0: y1, x0: x1] > 0).any())
+    return bool((gt_mask[y0: y1, x0: x1] > 0).any())   # 判决：窗内>0 的 GT 像素有一个就算命中
 
 
 # ---------------------------------------------------------------------------

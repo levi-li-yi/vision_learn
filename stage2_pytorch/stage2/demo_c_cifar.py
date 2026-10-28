@@ -30,17 +30,29 @@ from .train_loop import train_one_epoch, accuracy
 # ---------------------------------------------------------------------------
 
 class ConvBlock(nn.Module):
-    """
-    残差块：卷积+捷径(输入直加输出)——学"增量"比学"全部"容易。
-    """
+    """残差块="改图小车间"：图进、改进过的图出，内部两条路——
+      原图 ─┬─ 修改路(卷积扫图案) 出"建议图" ─┐
+            └─ 抄送路(原图原样递到底) ────────＋ 逐位置相加 = 出图
+    为什么抄送：每层都被迫"重写全文"时深网络学不动；给原文打底只写批注，
+    "不改"(批注留空)轻而易举——这是深网络训得动的关键(ResNet 思想，主仓库
+    EfficientViT 同款底子；残差=剩下的部分=批注)。另：分叉汇合结构 Sequential
+    表达不了，必须手写 forward。cin/cout=进/出几层"底片"(彩色图=红绿蓝 3 层
+    叠，网络内部层数会变 3->32->64->128，每层盯一种图案)。"""
+
     def __init__(self, cin, cout):
-        super().__init__()
+        super().__init__()  # 固定开场白：先初始化父类的登记簿
+        # 修改路三步串一条线：卷积(小放大镜扫图找图案=探测器) -> BatchNorm(给数字
+        # "过秤"：偏大偏小统一拉回正常范围，免得越算越离谱) -> ReLU(负数归零)。
+        # bias=False：卷积自带的"起步数"与过秤里的同类功能重复，省掉不装
         self.net = nn.Sequential(nn.Conv2d(cin, cout, 3, padding=1, bias=False),
                                  nn.BatchNorm2d(cout), nn.ReLU())
+        # 抄送路分两种：进出层数一样 -> Identity 直通管(进来原样出去零参数)；
+        # 不一样(3 层原图叠不上 32 层结果) -> 1x1 卷积当"转换插头"：按不同比例
+        # 把 cin 层调和成 cout 层(像红绿蓝调出 32 种色调)，层数对齐了才能叠
         self.short = nn.Conv2d(cin, cout, 1) if cin != cout else nn.Identity()
 
     def forward(self, x):
-        return self.net(x) + self.short(x)
+        return self.net(x) + self.short(x)  # 出图 = 原文 + 批注：建议图与原图逐位置相加
 
 
 class SmallResNet(nn.Module):

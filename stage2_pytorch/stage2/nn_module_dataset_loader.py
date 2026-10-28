@@ -33,6 +33,11 @@ class TinyCNN(nn.Module):
     算力定。真实业务几乎不从零设计：拿成熟骨干（ResNet/EfficientViT 等）
     换头 + 迁移学习（见 Demo D）。另：Sequential 只能表达直线流水线，
     带残差跳线的网络（如 ResNet）要手写 forward。
+
+    参数量 594 的来历（卷积旋钮=探测器数×通道×3x3 窗面积，打分器=128x2 权重
+    表，各输出再配 1 个偏置；ReLU/池化是固定规则、0 参数）：卷积① 4x1x9+4=40，
+    卷积② 8x4x9+8=296，打分器 128x2+2=258，合计 40+296+258=594
+    （named_parameters 共 6 个张量，sum(p.numel()) 数的就是它们）。
     """
 
     def __init__(self):
